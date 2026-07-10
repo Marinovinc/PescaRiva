@@ -95,6 +95,7 @@
   <div class="grp">
     <label title="Batimetria da satellite Sentinel-2 (10 m, sottocosta 0-18 m). Il metodo giusto per il sottocosta. Stima, non dato ufficiale."><input type="checkbox" id="lSdb"> <b style="color:#8dff3a">Profondità satellite 10 m (SDB)</b></label>
     <label title="Composito: media di più scene Sentinel-2 senza nuvole -> meno onde/torbidità, più preciso (più lento)"><input type="checkbox" id="lSdbComp"> &nbsp;&nbsp;&#8627; composito multi-data (+preciso)</label>
+    <label title="Linee di profondità (isobate) calcolate dalla SDB, con etichetta in metri"><input type="checkbox" id="lIso"> &nbsp;&nbsp;&#8627; linee batimetriche (isobate)</label>
     <label><input type="checkbox" id="lContours" checked> Isobate EMODnet (offshore)</label>
     <label title="Carta nautica OpenSeaMap: segnali, boe, e scandagli dove mappati (ODbL)"><input type="checkbox" id="lSeamark"> Carta nautica (OpenSeaMap)</label>
     <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:11px;padding:2px"></select></div>
@@ -497,6 +498,7 @@ async function loadSDB(feature){
     if(sdbOverlay) map.removeLayer(sdbOverlay);
     sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ovSdb').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
     sdbGrid={depth,W,H,bnds,calib,calibSrc,nManual};
+    drawIsobaths();   // ridisegna le linee batimetriche se attive
     try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:cv.toDataURL(),n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
     $('info').innerHTML='<b>SDB '+(calib?'calibrata (m)':'relativa')+'</b> '+date+' &middot; nuvole '+cc+'% &middot; '+
       '<span class="sub">'+(calib?('isobate -2/-5/-10/-15 m &middot; base: '+calibSrc+' &middot; tocca per la profondità'):'chiaro=basso, scuro=profondo (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
@@ -513,9 +515,54 @@ function restoreOfflineSDB(){ try{ const s=JSON.parse(localStorage.getItem('pr_s
 $('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='block'; $('info').innerHTML='SDB: cerco le scene Sentinel-2&hellip;';
     try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()) return; }
     if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
-  else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
+  else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
 $('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[i]||sdbScenes[0]); } };
+
+// ---- LINEE BATIMETRICHE (isobate vettoriali dalla SDB, marching squares) ----
+let isoOverlay=null;
+const ISO_LV=[-1,-2,-3,-4,-5,-7,-10,-15,-20];
+function isoColor(L){ const t=Math.min(1,(-L)/20), r=Math.round(180-140*t), g=Math.round(245-140*t); return 'rgb('+r+','+g+',255)'; }
+function drawIsobaths(){
+  if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; }
+  if(!($('lIso')&&$('lIso').checked) || !sdbGrid) return;
+  const g=sdbGrid,W=g.W,H=g.H,depth=g.depth,b=g.bnds;
+  const CW=900,CH=Math.round(CW*H/W),cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;
+  const ctx=cv.getContext('2d'); ctx.font='bold 15px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const gx=x=>x/(W-1)*CW, gy=y=>y/(H-1)*CH;
+  const tab={1:[['B','L']],2:[['R','B']],3:[['R','L']],4:[['T','R']],5:[['T','R'],['B','L']],6:[['T','B']],7:[['T','L']],8:[['T','L']],9:[['T','B']],10:[['T','L'],['R','B']],11:[['T','R']],12:[['L','R']],13:[['R','B']],14:[['B','L']]};
+  for(const L of ISO_LV){ const segs=[];
+    for(let y=0;y<H-1;y++) for(let x=0;x<W-1;x++){
+      const a=depth[y*W+x],bb=depth[y*W+x+1],c=depth[(y+1)*W+x+1],d=depth[(y+1)*W+x];
+      if(isNaN(a)||isNaN(bb)||isNaN(c)||isNaN(d)) continue;
+      let idx=0; if(a>L)idx|=8; if(bb>L)idx|=4; if(c>L)idx|=2; if(d>L)idx|=1;
+      if(idx===0||idx===15) continue;
+      const E={T:[x+(L-a)/(bb-a),y],R:[x+1,y+(L-bb)/(c-bb)],B:[x+(L-d)/(c-d),y+1],L:[x,y+(L-a)/(d-a)]};
+      for(const pq of (tab[idx]||[])) segs.push([E[pq[0]],E[pq[1]]]); }
+    if(!segs.length) continue;
+    ctx.strokeStyle=isoColor(L); ctx.lineWidth=1.6; ctx.beginPath();
+    for(const s of segs){ ctx.moveTo(gx(s[0][0]),gy(s[0][1])); ctx.lineTo(gx(s[1][0]),gy(s[1][1])); } ctx.stroke();
+    const step=Math.max(35,(segs.length/4)|0);
+    for(let k=0;k<segs.length;k+=step){ const s=segs[k],mx=gx((s[0][0]+s[1][0])/2),my=gy((s[0][1]+s[1][1])/2);
+      ctx.lineWidth=3; ctx.strokeStyle='rgba(4,10,20,.9)'; ctx.strokeText(Math.abs(L)+'m',mx,my);
+      ctx.fillStyle=isoColor(L); ctx.fillText(Math.abs(L)+'m',mx,my); } }
+  isoOverlay=L.imageOverlay(cv.toDataURL(),b,{opacity:0.95,interactive:false}).addTo(map);
+}
+$('lIso').onchange=()=>{ if($('lIso').checked && !sdbGrid){ $('info').style.display='block'; $('info').innerHTML='Attiva prima la <b>Profondità satellite (SDB)</b>: le linee si calcolano da lì'; setTimeout(()=>$('info').style.display='none',3800); $('lIso').checked=false; return; } drawIsobaths(); };
+
+// La SDB (Prof.) segue la parte visibile: allo spostamento/zoom si ricalcola per la nuova area
+let sdbMoveT=null;
+function coverFrac(v,g){ const iw=Math.max(0,Math.min(v.getEast(),g.getEast())-Math.max(v.getWest(),g.getWest())),
+  ih=Math.max(0,Math.min(v.getNorth(),g.getNorth())-Math.max(v.getSouth(),g.getSouth())),
+  va=(v.getEast()-v.getWest())*(v.getNorth()-v.getSouth()); return va>0?(iw*ih)/va:0; }
+map.on('moveend', ()=>{ if(!$('lSdb').checked) return; clearTimeout(sdbMoveT);
+  sdbMoveT=setTimeout(async ()=>{ if(sdbBusy||!$('lSdb').checked) return;
+    if(map.getZoom()<12) return;                                   // troppo largo: SDB non ha senso
+    const v=map.getBounds();
+    if(sdbGrid && coverFrac(v,sdbGrid.bnds)>0.7) return;           // area ancora coperta: niente ricarico
+    sdbScenes=[]; try{ await ensureScenes(v); }catch(e){ return; } // nuove scene per l'area visibile
+    if(sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[Math.min(i,sdbScenes.length-1)]||sdbScenes[0]); }
+  }, 900); });
 
 // ================= SELETTORE LOCALITÀ =================
 const PLACES=[{n:'A9 (il mio spot)',lat:41.35002,lng:12.96553,z:16},{n:'Sabaudia',lat:41.2668,lng:13.0265,z:15},{n:'Ostia',lat:41.7250,lng:12.2750,z:14},
