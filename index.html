@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#06121f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="PescaRiva">
+<title>PescaRiva — sottocosta per la pesca da riva</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html,body{margin:0;height:100%;background:#06121f;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#dfeaf5}
+  #map{position:absolute;inset:0}
+  .leaflet-container{background:#06121f}
+  #title{position:fixed;z-index:1000;top:8px;left:50%;transform:translateX(-50%);
+    background:rgba(10,22,38,.94);border:1px solid #1f3650;border-radius:10px;padding:6px 13px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  #title small{font-weight:400;color:#8fb0cc;font-size:10px}
+  #panel{position:fixed;z-index:1000;top:8px;right:8px;width:210px;background:rgba(10,22,38,.94);border:1px solid #1f3650;border-radius:10px;
+    padding:8px 11px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  #panel h4{margin:0 0 5px;color:#16e0ff;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+  #panel label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;padding:2px 0}
+  #panel .grp{border-top:1px solid #1f3650;margin-top:6px;padding-top:6px}
+  #panel .rng{display:flex;align-items:center;gap:6px;color:#8fb0cc}
+  #panel input[type=range]{flex:1;accent-color:#16e0ff}
+  #info{position:fixed;z-index:1000;left:8px;bottom:8px;right:8px;max-width:520px;background:rgba(10,22,38,.95);border:1px solid #1f3650;
+    border-radius:10px;padding:8px 12px;font-size:12.5px;display:none;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  #info b{color:#16e0ff}
+  #info .sub{color:#8fb0cc;font-size:11px}
+  #legend{position:fixed;z-index:1000;left:8px;top:52px;background:rgba(10,22,38,.92);border:1px solid #1f3650;border-radius:8px;
+    padding:6px 9px;font-size:11px;color:#cfe0f2;max-width:150px;display:none}
+  #legend .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+  #legend i{width:13px;height:13px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(255,255,255,.25)}
+  .hint{color:#8fb0cc;font-size:11px;margin-top:4px}
+  .leaflet-popup-content-wrapper{background:#0e2034;color:#dfeaf5;border:1px solid #1f3650}
+  .leaflet-popup-tip{background:#0e2034;border:1px solid #1f3650}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="title">PescaRiva &mdash; Sabaudia<br><small>litorale &middot; primi 200&ndash;300 m</small></div>
+
+<div id="panel">
+  <h4>Livelli</h4>
+  <label><input type="radio" name="base" id="baseSat" checked> Satellitare (vedi il fondale)</label>
+  <label><input type="radio" name="base" id="baseOsm"> Mappa (OSM)</label>
+  <div class="grp">
+    <label><input type="checkbox" id="lBathy"> Batimetria EMODnet (colori)</label>
+    <label><input type="checkbox" id="lContours" checked> Isobate (linee)</label>
+    <label title="Batimetria da satellite Sentinel-2 (10 m, sottocosta 0-15 m). Stima, non dato ufficiale."><input type="checkbox" id="lSdb"> <b style="color:#8dff3a">SDB satellitare 10 m</b></label>
+    <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:11px;padding:2px"></select></div>
+    <label><input type="checkbox" id="lSub"> Substrato (sabbia/roccia)</label>
+    <label><input type="checkbox" id="lPos"> Posidonia</label>
+    <div class="rng">Opacità <input type="range" id="ov" min="20" max="100" value="70"></div>
+  </div>
+  <div class="grp">
+    <label><input type="checkbox" id="lRuler"> &#128207; Righello lancio</label>
+  </div>
+  <div class="hint">Tocca il mare per profondità e fondale.<br>Righello ON: tocca riva &rarr; meta.</div>
+</div>
+
+<div id="legend"></div>
+<div id="info"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const map=L.map('map',{center:[41.270,13.020],zoom:14,zoomControl:true,attributionControl:true});   // Litorale di Sabaudia (Circeo)
+map.attributionControl.setPrefix('PescaRiva');
+
+// ---- BASI ----
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, attribution:'Imagery &copy; Esri, Maxar'});
+const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; OpenStreetMap'});
+sat.addTo(map);
+$('baseSat').onchange=()=>{ map.removeLayer(osm); sat.addTo(map); };
+$('baseOsm').onchange=()=>{ map.removeLayer(sat); osm.addTo(map); };
+
+// ---- BATIMETRIA EMODnet (WMS raster, sopra la base) ----
+const EMOD='https://ows.emodnet-bathymetry.eu/wms';
+const bathy=L.tileLayer.wms(EMOD,{layers:'emodnet:mean_multicolour',format:'image/png',transparent:true,opacity:0.45,attribution:'&copy; EMODnet Bathymetry'});
+const contours=L.tileLayer.wms(EMOD,{layers:'emodnet:contours',format:'image/png',transparent:true,opacity:0.85,attribution:'&copy; EMODnet Bathymetry'});
+contours.addTo(map);   // isobate ON di default; batimetria a colori OFF (coprirebbe il fondale satellitare sottocosta)
+
+// ---- SUBSTRATO (EUSeaMap 2023) + POSIDONIA (EMODnet Seabed Habitats) ----
+const SBH='https://ows.emodnet-seabedhabitats.eu/geoserver/emodnet_view/wms';
+const substrate=L.tileLayer.wms(SBH,{layers:'eunis2019Maps_200',format:'image/png',transparent:true,opacity:0.7,attribution:'&copy; EMODnet Seabed Habitats (EUSeaMap 2023)'});
+const posidonia=L.tileLayer.wms(SBH,{layers:'seagrass_eov_poly_2025',format:'image/png',transparent:true,opacity:0.7,attribution:'&copy; EMODnet Seabed Habitats'});
+
+function bind(chk,layer){ $(chk).onchange=()=>{ if($(chk).checked) layer.addTo(map); else map.removeLayer(layer); updLegend(); }; }
+bind('lBathy',bathy); bind('lContours',contours); bind('lSub',substrate); bind('lPos',posidonia);
+$('ov').oninput=()=>{ const o=$('ov').value/100; bathy.setOpacity(o*0.8); substrate.setOpacity(o); posidonia.setOpacity(o); if(sdbOverlay) sdbOverlay.setOpacity(o); };
+
+// ---- LEGENDA (mostra quando substrato/posidonia attivi) ----
+function updLegend(){
+  const rows=[];
+  if($('lPos').checked) rows.push(['#1a8f3c','Posidonia (prateria)']);
+  if($('lSub').checked){ rows.push(['#f2e394','Sedimento fine / sabbia']); rows.push(['#c8a45a','Sabbia grossa / ghiaia']); rows.push(['#9a9a9a','Roccia / substrato duro']); rows.push(['#6b8fb5','Fango / infralitorale']); }
+  const el=$('legend');
+  if(!rows.length){ el.style.display='none'; return; }
+  el.innerHTML='<div style="color:#16e0ff;font-weight:700;margin-bottom:3px">Fondale</div>'+
+    rows.map(r=>'<div class="row"><i style="background:'+r[0]+'"></i>'+r[1]+'</div>').join('')+
+    '<div style="color:#8fb0cc;font-size:9.5px;margin-top:3px">colori indicativi &middot; tocca per il tipo esatto</div>';
+  el.style.display='block';
+}
+
+// ---- PROFONDITA' AL TOCCO (EMODnet WCS GeoTIFF, ~115 m) + tipo di fondale (GetFeatureInfo) ----
+const NATIVE=0.0010416666666666667;
+const WCS='https://ows.emodnet-bathymetry.eu/wcs?service=WCS&version=2.0.1&request=GetCoverage&coverageId=emodnet__mean&format=image/tiff';
+function fetchTO(url,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(url,{signal:c.signal}).finally(()=>clearTimeout(t));}
+async function depthAt(lat,lon){
+  try{ const d=0.02, url=WCS+'&subset=Lat('+(lat-d)+','+(lat+d)+')&subset=Long('+(lon-d)+','+(lon+d)+')&scalefactor=0.2';
+    const r=await fetchTO(url,20000); if(!r.ok) return null; const buf=await r.arrayBuffer();
+    const tif=await GeoTIFF.fromArrayBuffer(buf); const img=await tif.getImage(); const data=(await img.readRasters())[0];
+    const v=data[Math.floor(img.getHeight()/2)*img.getWidth()+Math.floor(img.getWidth()/2)];
+    return (v>-8000&&v<200)?v:null; }catch(e){ return null; }
+}
+// GetFeatureInfo sul substrato: che habitat/fondale c'è nel punto
+async function habitatAt(lat,lon){
+  try{
+    const p=map.latLngToContainerPoint([lat,lon]), s=map.getSize(), b=map.getBounds();
+    const layer = $('lPos').checked ? 'seagrass_eov_poly_2025' : 'eunis2019Maps_200';
+    const url=SBH+'?service=WMS&version=1.3.0&request=GetFeatureInfo&crs=CRS:84'+
+      '&bbox='+b.getWest()+','+b.getSouth()+','+b.getEast()+','+b.getNorth()+
+      '&width='+Math.round(s.x)+'&height='+Math.round(s.y)+'&i='+Math.round(p.x)+'&j='+Math.round(p.y)+
+      '&layers='+layer+'&query_layers='+layer+'&info_format=application/json&feature_count=1';
+    const r=await fetchTO(url,15000); if(!r.ok) return null; const j=await r.json();
+    if(!j.features||!j.features.length) return null; const pr=j.features[0].properties||{};
+    return pr.AllcombD || pr.hab_type || pr.Habitat || pr.EUNIScomb || pr.substrate || pr.HAB_TYPE || pr.name || null;
+  }catch(e){ return null; }
+}
+// ---- RIGHELLO LANCIO (distanza riva -> meta, per il surfcasting) ----
+let rulerPts=[], rulerLine=null, rulerMarks=[];
+function fmtM(m){ return m>=1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m'; }
+function drawRuler(){
+  if(rulerLine){ map.removeLayer(rulerLine); rulerLine=null; } rulerMarks.forEach(m=>map.removeLayer(m)); rulerMarks=[];
+  if(rulerPts.length>=2) rulerLine=L.polyline(rulerPts,{color:'#ff5be0',weight:3,dashArray:'6,5'}).addTo(map);
+  rulerPts.forEach(p=>rulerMarks.push(L.circleMarker(p,{radius:5,color:'#fff',fillColor:'#ff5be0',fillOpacity:1,weight:1}).addTo(map)));
+  if(rulerPts.length>=2){ let t=0; for(let i=1;i<rulerPts.length;i++) t+=map.distance(rulerPts[i-1],rulerPts[i]);
+    $('info').style.display='block';
+    $('info').innerHTML='Distanza lancio: <b>'+fmtM(t)+'</b><br><span class="sub">'+rulerPts.length+' punti &middot; tocca ancora per estendere &middot; togli la spunta per azzerare</span>'; }
+}
+$('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
+  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca dove sei sulla riva, poi la meta del lancio<br><span class="sub">tipico surfcasting 80&ndash;150 m</span>'; }
+  else $('info').style.display='none'; };
+
+let infoT=null;
+map.on('click', async e=>{
+  const {lat,lng}=e.latlng;
+  if($('lRuler').checked){ rulerPts.push([lat,lng]); drawRuler(); return; }
+  // Profondità dalla SDB satellitare (10 m) se disponibile e nel riquadro
+  if(sdbGrid){ const g=sdbGrid,b=g.bnds;
+    if(lat<=b.getNorth()&&lat>=b.getSouth()&&lng>=b.getWest()&&lng<=b.getEast()){
+      const px=Math.round((lng-b.getWest())/(b.getEast()-b.getWest())*(g.W-1)), py=Math.round((b.getNorth()-lat)/(b.getNorth()-b.getSouth())*(g.H-1));
+      const z=g.depth[py*g.W+px];
+      if(isFinite(z)){ $('info').style.display='block';
+        $('info').innerHTML='Profondità <b>satellite ~10 m</b>: '+(g.calib?('<b>'+Math.abs(z).toFixed(1)+' m</b>'):('rel. '+Math.round(-z/15*100)+'%'))+
+          '<br><span class="sub">'+lat.toFixed(5)+', '+lng.toFixed(5)+' &middot; SDB Sentinel-2, stima</span>';
+        clearTimeout(infoT); infoT=setTimeout(()=>$('info').style.display='none',9000); return; }
+    }
+  }
+  $('info').style.display='block';
+  $('info').innerHTML='Leggo profondità e fondale&hellip;<br><span class="sub">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span>';
+  clearTimeout(infoT);
+  const [d,h]=await Promise.all([depthAt(lat,lng), (($('lSub').checked||$('lPos').checked)?habitatAt(lat,lng):Promise.resolve(null))]);
+  const dep = d==null ? '—' : (d>=0 ? ('terra +'+Math.round(d)+' m') : ('<b>'+Math.abs(Math.round(d))+' m</b> di fondale'));
+  $('info').innerHTML='Profondità: '+dep+(h?(' &middot; fondale: <b>'+h+'</b>'):'')+
+    '<br><span class="sub">'+lat.toFixed(5)+', '+lng.toFixed(5)+' &middot; profondità EMODnet ~115 m (stima)</span>';
+  infoT=setTimeout(()=>{ $('info').style.display='none'; }, 9000);
+});
+updLegend();
+
+// ================= SDB SATELLITARE (Sentinel-2, Stumpf log-ratio, senza credenziali) =================
+// STAC Earth Search (AWS Open Data) -> legge B02(blu)/B03(verde)/B08(NIR) come COG con range request ->
+// pSDB = ln(blu)/ln(verde), normalizzato sull'acqua (maschera NDWI) -> profondita' RELATIVA sottocosta (~10 m).
+// Stima da satellite: valida in acqua limpida 0-15 m, NON e' dato batimetrico ufficiale.
+let sdbOverlay=null, sdbBusy=false, sdbScenes=[], sdbGrid=null;
+const ISO=[-2,-5,-10,-15];   // isobate evidenziate (m)
+function sdbColor(depth){ // depth negativo (m): 0=chiaro .. -15=blu scuro
+  let t=Math.min(1,Math.max(0,(-depth)/15)); const stops=[[0,[190,240,255]],[0.35,[95,185,235]],[0.7,[35,110,200]],[1,[10,40,110]]];
+  for(let i=1;i<stops.length;i++){ if(t<=stops[i][0]){ const a=stops[i-1],b=stops[i],k=(t-a[0])/(b[0]-a[0]);
+    return [Math.round(a[1][0]+(b[1][0]-a[1][0])*k),Math.round(a[1][1]+(b[1][1]-a[1][1])*k),Math.round(a[1][2]+(b[1][2]-a[1][2])*k)]; } }
+  return stops[3][1];
+}
+// Calibrazione: griglia EMODnet (WCS) sul bbox + campionamento + fit lineare pSDB->profondità
+async function emodnetGrid(bn){
+  const d=0.006,S=bn.getSouth()-d,N=bn.getNorth()+d,Wd=bn.getWest()-d,E=bn.getEast()+d;
+  const url=WCS+'&subset=Lat('+S+','+N+')&subset=Long('+Wd+','+E+')&scalefactor=1';
+  const r=await fetchTO(url,25000); if(!r.ok) return null; const buf=await r.arrayBuffer();
+  const tif=await GeoTIFF.fromArrayBuffer(buf); const img=await tif.getImage(); const data=(await img.readRasters())[0];
+  return {data,w:img.getWidth(),h:img.getHeight(),N,S,W:Wd,E};
+}
+function emodAt(g,lat,lon){ if(!g||lat>g.N||lat<g.S||lon<g.W||lon>g.E) return null;
+  const j=Math.round((lon-g.W)/((g.E-g.W)/(g.w-1))), i=Math.round((g.N-lat)/((g.N-g.S)/(g.h-1)));
+  if(i<0||i>=g.h||j<0||j>=g.w) return null; const v=g.data[i*g.w+j]; return (v>-8000&&v<200)?v:null; }
+function linfit(xs,ys){ const n=xs.length; if(n<8) return null; let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){sx+=xs[i];sy+=ys[i];sxx+=xs[i]*xs[i];sxy+=xs[i]*ys[i];}
+  const den=n*sxx-sx*sx; if(Math.abs(den)<1e-9) return null; const a=(n*sxy-sx*sy)/den; return {a,b:(sy-a*sx)/n}; }
+async function readBand(url, bnds, epsgRef){
+  const tif=await GeoTIFF.fromUrl(url); const img=await tif.getImage();
+  const gk=img.getGeoKeys(); const epsg=gk.ProjectedCSTypeGeoKey||epsgRef; const zone=epsg-32600;
+  if(!proj4.defs['EPSG:'+epsg]) proj4.defs('EPSG:'+epsg,'+proj=utm +zone='+zone+' +ellps=WGS84 +datum=WGS84 +units=m +no_defs');
+  const [ox,oy]=img.getOrigin(); const res=img.getResolution(), rx=res[0], ry=res[1];
+  const toU=proj4('EPSG:4326','EPSG:'+epsg);
+  const c=[toU.forward([bnds.getWest(),bnds.getSouth()]),toU.forward([bnds.getWest(),bnds.getNorth()]),toU.forward([bnds.getEast(),bnds.getSouth()]),toU.forward([bnds.getEast(),bnds.getNorth()])];
+  const xs=c.map(p=>p[0]),ys=c.map(p=>p[1]); const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+  let c0=Math.floor((minx-ox)/rx), c1=Math.ceil((maxx-ox)/rx), r0=Math.floor((maxy-oy)/ry), r1=Math.ceil((miny-oy)/ry);
+  c0=Math.max(0,c0); c1=Math.min(img.getWidth(),c1); r0=Math.max(0,r0); r1=Math.min(img.getHeight(),r1);
+  const OUT=280;
+  const d=await img.readRasters({window:[c0,r0,c1,r1],width:OUT,height:OUT,samples:[0]});
+  return {data:d[0], w:OUT, h:OUT, epsg};
+}
+async function ensureScenes(bnds){
+  if(sdbScenes.length) return;
+  const bbox=[bnds.getWest(),bnds.getSouth(),bnds.getEast(),bnds.getNorth()];
+  const sr=await fetch('https://earth-search.aws.element84.com/v1/search',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({collections:['sentinel-2-l2a'],bbox:bbox,query:{'eo:cloud_cover':{lt:20}},sortby:[{field:'properties.eo:cloud_cover',direction:'asc'}],limit:12})});
+  const sj=await sr.json(); sdbScenes=sj.features||[];
+  $('sdbDate').innerHTML=sdbScenes.map((f,i)=>'<option value="'+i+'">'+f.properties.datetime.slice(0,10)+' &middot; '+(f.properties['eo:cloud_cover']||0).toFixed(1)+'% nuv.</option>').join('');
+  $('sdbDateRow').style.display=sdbScenes.length?'flex':'none';
+}
+async function loadSDB(feature){
+  if(sdbBusy||!feature) return; sdbBusy=true;
+  const bnds=map.getBounds(), a=feature.assets, date=feature.properties.datetime.slice(0,10), cc=(feature.properties['eo:cloud_cover']||0).toFixed(1);
+  $('info').style.display='block'; $('info').innerHTML='SDB: leggo le bande Sentinel-2 ('+date+')&hellip;';
+  try{
+    const B=await readBand((a.blue||a.B02).href,bnds); const G=await readBand((a.green||a.B03).href,bnds,B.epsg); const N=await readBand((a.nir||a.B08).href,bnds,B.epsg);
+    const W=B.w,H=B.h, blue=B.data,green=G.data,nir=N.data, xW=bnds.getWest(),xE=bnds.getEast(),yN=bnds.getNorth(),yS=bnds.getSouth();
+    const ps=new Float32Array(W*H).fill(NaN); let nw=0;
+    for(let i=0;i<W*H;i++){ const bl=blue[i],gr=green[i],ni=nir[i]; if(bl<=0||gr<=0) continue;
+      if((gr-ni)/(gr+ni+1e-6)<0.02 || ni>1200) continue;   // maschera acqua (NDWI + NIR)
+      const p=Math.log(1000*bl)/Math.log(1000*gr); if(isFinite(p)){ ps[i]=p; nw++; } }
+    if(nw<50) throw new Error('poca acqua limpida (zoom sul mare)');
+    $('info').innerHTML='SDB: calibro con EMODnet&hellip;';
+    const eg=await emodnetGrid(bnds).catch(()=>null); let fit=null;
+    if(eg){ const xs=[],ys=[]; for(let py=0;py<H;py+=2)for(let px=0;px<W;px+=2){ const p=ps[py*W+px]; if(isNaN(p))continue;
+      const ed=emodAt(eg, yN-(py/(H-1))*(yN-yS), xW+(px/(W-1))*(xE-xW));
+      if(ed!=null&&ed<-1&&ed>-25){ xs.push(p); ys.push(ed); } } fit=linfit(xs,ys); }
+    const calib = !!(fit && fit.a<0);
+    const depth=new Float32Array(W*H).fill(NaN);
+    if(calib){ for(let i=0;i<W*H;i++) if(!isNaN(ps[i])) depth[i]=Math.min(0,fit.a*ps[i]+fit.b); }
+    else { const arr=Array.from(ps).filter(v=>!isNaN(v)).sort((x,y)=>x-y); const lo=arr[(arr.length*0.03)|0],hi=arr[(arr.length*0.97)|0];
+      for(let i=0;i<W*H;i++){ if(!isNaN(ps[i])){ let t=(ps[i]-lo)/(hi-lo+1e-9); t=t<0?0:(t>1?1:t); depth[i]=-t*15; } } }
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d'); const im=ctx.createImageData(W,H);
+    const isoLine=(z,py,px)=>{ const zr=depth[py*W+(px+1<W?px+1:px)], zd=depth[(py+1<H?py+1:py)*W+px];
+      for(const t of ISO){ if((z-t)*((isNaN(zr)?z:zr)-t)<0||(z-t)*((isNaN(zd)?z:zd)-t)<0) return true; } return false; };
+    for(let py=0;py<H;py++)for(let px=0;px<W;px++){ const i=py*W+px, z=depth[i]; if(isNaN(z)){ im.data[i*4+3]=0; continue; }
+      let c=sdbColor(z); if(isoLine(z,py,px)) c=[255,255,255];
+      im.data[i*4]=c[0]; im.data[i*4+1]=c[1]; im.data[i*4+2]=c[2]; im.data[i*4+3]=210; }
+    ctx.putImageData(im,0,0);
+    if(sdbOverlay) map.removeLayer(sdbOverlay);
+    sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ov').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
+    sdbGrid={depth,W,H,bnds,calib};
+    $('info').innerHTML='<b>SDB '+(calib?'calibrata (m)':'relativa')+'</b> '+date+' &middot; nuvole '+cc+'% &middot; '+
+      '<span class="sub">'+(calib?'isobate bianche -2/-5/-10/-15 m &middot; tocca per la profondità':'chiaro=basso, scuro=profondo (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
+  }catch(e){ $('info').innerHTML='SDB non riuscita: '+e.message; if($('lSdb')) $('lSdb').checked=false; }
+  sdbBusy=false;
+}
+$('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='block'; $('info').innerHTML='SDB: cerco le scene Sentinel-2&hellip;';
+    await ensureScenes(map.getBounds()); if(sdbScenes.length) loadSDB(sdbScenes[0]); else { $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
+  else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
+$('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
+</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+</body>
+</html>
