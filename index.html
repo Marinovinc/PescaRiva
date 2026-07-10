@@ -542,12 +542,14 @@ function drawIsobaths(){
   if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; }
   if(!($('lIso')&&$('lIso').checked) || !sdbGrid) return;
   const g=sdbGrid,W=g.W,H=g.H,b=g.bnds;
+  const fine=$('lIsoFine')&&$('lIsoFine').checked;
   let depth=smoothDepth(g.depth,W,H,2); depth=smoothDepth(depth,W,H,2);   // 2 passaggi -> linee lisce
+  if(fine){ depth=smoothDepth(depth,W,H,3); depth=smoothDepth(depth,W,H,3); depth=smoothDepth(depth,W,H,4); }  // lisciatura extra: 0,5 m e' vicino al rumore SDB
   const CW=900,CH=Math.round(CW*H/W),cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;
   const ctx=cv.getContext('2d'); ctx.font='bold 15px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
   const gx=x=>x/(W-1)*CW, gy=y=>y/(H-1)*CH;
   const tab={1:[['B','L']],2:[['R','B']],3:[['R','L']],4:[['T','R']],5:[['T','R'],['B','L']],6:[['T','B']],7:[['T','L']],8:[['T','L']],9:[['T','B']],10:[['T','L'],['R','B']],11:[['T','R']],12:[['L','R']],13:[['R','B']],14:[['B','L']]};
-  const levels=($('lIsoFine')&&$('lIsoFine').checked)?ISO_LV_FINE:ISO_LV;
+  const levels=fine?ISO_LV_FINE:ISO_LV;
   for(const L of levels){ const segs=[];
     for(let y=0;y<H-1;y++) for(let x=0;x<W-1;x++){
       const a=depth[y*W+x],bb=depth[y*W+x+1],c=depth[(y+1)*W+x+1],d=depth[(y+1)*W+x];
