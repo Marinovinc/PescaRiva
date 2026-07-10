@@ -90,9 +90,10 @@
   <label><input type="radio" name="base" id="baseSat" checked> Satellitare (vedi il fondale)</label>
   <label><input type="radio" name="base" id="baseOsm"> Mappa (OSM)</label>
   <div class="grp">
-    <label><input type="checkbox" id="lBathy"> Batimetria EMODnet (colori)</label>
-    <label><input type="checkbox" id="lContours" checked> Isobate (linee)</label>
-    <label title="Batimetria da satellite Sentinel-2 (10 m, sottocosta 0-15 m). Stima, non dato ufficiale."><input type="checkbox" id="lSdb"> <b style="color:#8dff3a">SDB satellitare 10 m</b></label>
+    <label title="Batimetria da satellite Sentinel-2 (10 m, sottocosta 0-18 m). Il metodo giusto per il sottocosta. Stima, non dato ufficiale."><input type="checkbox" id="lSdb"> <b style="color:#8dff3a">Profondità satellite 10 m (SDB)</b></label>
+    <label title="Composito: media di più scene Sentinel-2 senza nuvole -> meno onde/torbidità, più preciso (più lento)"><input type="checkbox" id="lSdbComp"> &nbsp;&nbsp;&#8627; composito multi-data (+preciso)</label>
+    <label><input type="checkbox" id="lContours" checked> Isobate EMODnet (offshore)</label>
+    <label title="Carta nautica OpenSeaMap: segnali, boe, e scandagli dove mappati (ODbL)"><input type="checkbox" id="lSeamark"> Carta nautica (OpenSeaMap)</label>
     <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:11px;padding:2px"></select></div>
     <label><input type="checkbox" id="lSub"> Substrato (sabbia/roccia)</label>
     <label><input type="checkbox" id="lPos"> Posidonia</label>
@@ -159,9 +160,10 @@ $('baseOsm').onchange=()=>{ map.removeLayer(sat); osm.addTo(map); };
 
 // ---- BATIMETRIA EMODnet (WMS raster, sopra la base) ----
 const EMOD='https://ows.emodnet-bathymetry.eu/wms';
-const bathy=L.tileLayer.wms(EMOD,{layers:'emodnet:mean_multicolour',format:'image/png',transparent:true,opacity:0.45,attribution:'&copy; EMODnet Bathymetry'});
 const contours=L.tileLayer.wms(EMOD,{layers:'emodnet:contours',format:'image/png',transparent:true,opacity:0.85,attribution:'&copy; EMODnet Bathymetry'});
-contours.addTo(map);   // isobate ON di default; batimetria a colori OFF (coprirebbe il fondale satellitare sottocosta)
+contours.addTo(map);   // isobate EMODnet ON (utili offshore); la batimetria a colori EMODnet e' rimossa: inutile sottocosta (nativo ~115 m) -> si usa la SDB satellitare
+// Carta nautica OpenSeaMap (ODbL): segnali/boe/scandagli dove mappati
+const seamark=L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{y}/{x}.png',{maxZoom:18,opacity:1,attribution:'&copy; OpenSeaMap (ODbL)'});
 
 // ---- SUBSTRATO (EUSeaMap 2023) + POSIDONIA (EMODnet Seabed Habitats) ----
 const SBH='https://ows.emodnet-seabedhabitats.eu/geoserver/emodnet_view/wms';
@@ -169,9 +171,9 @@ const substrate=L.tileLayer.wms(SBH,{layers:'eunis2019Maps_200',format:'image/pn
 const posidonia=L.tileLayer.wms(SBH,{layers:'seagrass_eov_poly_2025',format:'image/png',transparent:true,opacity:0.7,attribution:'&copy; EMODnet Seabed Habitats'});
 
 function bind(chk,layer){ $(chk).onchange=()=>{ if($(chk).checked) layer.addTo(map); else map.removeLayer(layer); updLegend(); }; }
-bind('lBathy',bathy); bind('lContours',contours); bind('lSub',substrate); bind('lPos',posidonia);
+bind('lContours',contours); bind('lSub',substrate); bind('lPos',posidonia); bind('lSeamark',seamark);
 // Due slider separati: profondità (SDB + batimetria) e habitat (substrato/Posidonia)
-function updSdbOv(){ const o=$('ovSdb').value/100; $('ovSdbV').textContent=$('ovSdb').value+'%'; bathy.setOpacity(o*0.8); if(sdbOverlay) sdbOverlay.setOpacity(o); }
+function updSdbOv(){ const o=$('ovSdb').value/100; $('ovSdbV').textContent=$('ovSdb').value+'%'; if(sdbOverlay) sdbOverlay.setOpacity(o); }
 function updHabOv(){ const o=$('ovHab').value/100; $('ovHabV').textContent=$('ovHab').value+'%'; substrate.setOpacity(o); posidonia.setOpacity(o); }
 $('ovSdb').oninput=updSdbOv; $('ovHab').oninput=updHabOv;
 
@@ -404,6 +406,16 @@ async function readBand(url, bnds, epsgRef){
   const d=await img.readRasters({window:[c0,r0,c1,r1],width:OUT,height:OUT,samples:[0]});
   return {data:d[0], w:OUT, h:OUT, epsg};
 }
+// Legge B02/B03/B08 di una scena e calcola il pSDB (Stumpf) sui pixel d'acqua (maschera NDWI)
+async function readPSDB(feature, bnds){
+  const a=feature.assets;
+  const B=await readBand((a.blue||a.B02).href,bnds), G=await readBand((a.green||a.B03).href,bnds,B.epsg), N=await readBand((a.nir||a.B08).href,bnds,B.epsg);
+  const W=B.w,H=B.h, blue=B.data,green=G.data,nir=N.data, ps=new Float32Array(W*H).fill(NaN); let nw=0;
+  for(let i=0;i<W*H;i++){ const bl=blue[i],gr=green[i],ni=nir[i]; if(bl<=0||gr<=0) continue;
+    if((gr-ni)/(gr+ni+1e-6)<0.02 || ni>1200) continue;   // maschera acqua (NDWI + NIR)
+    const p=Math.log(1000*bl)/Math.log(1000*gr); if(isFinite(p)){ ps[i]=p; nw++; } }
+  return {ps,W,H,nw};
+}
 async function ensureScenes(bnds){
   if(sdbScenes.length) return;
   const bbox=[bnds.getWest(),bnds.getSouth(),bnds.getEast(),bnds.getNorth()];
@@ -415,15 +427,26 @@ async function ensureScenes(bnds){
 }
 async function loadSDB(feature){
   if(sdbBusy||!feature) return; sdbBusy=true;
-  const bnds=map.getBounds(), a=feature.assets, date=feature.properties.datetime.slice(0,10), cc=(feature.properties['eo:cloud_cover']||0).toFixed(1);
+  const bnds=map.getBounds(), xW=bnds.getWest(),xE=bnds.getEast(),yN=bnds.getNorth(),yS=bnds.getSouth();
+  const comp=$('lSdbComp')&&$('lSdbComp').checked;
+  let date=feature.properties.datetime.slice(0,10), cc=(feature.properties['eo:cloud_cover']||0).toFixed(1);
   $('info').style.display='block'; $('info').innerHTML='SDB: leggo le bande Sentinel-2 ('+date+')&hellip;';
   try{
-    const B=await readBand((a.blue||a.B02).href,bnds); const G=await readBand((a.green||a.B03).href,bnds,B.epsg); const N=await readBand((a.nir||a.B08).href,bnds,B.epsg);
-    const W=B.w,H=B.h, blue=B.data,green=G.data,nir=N.data, xW=bnds.getWest(),xE=bnds.getEast(),yN=bnds.getNorth(),yS=bnds.getSouth();
-    const ps=new Float32Array(W*H).fill(NaN); let nw=0;
-    for(let i=0;i<W*H;i++){ const bl=blue[i],gr=green[i],ni=nir[i]; if(bl<=0||gr<=0) continue;
-      if((gr-ni)/(gr+ni+1e-6)<0.02 || ni>1200) continue;   // maschera acqua (NDWI + NIR)
-      const p=Math.log(1000*bl)/Math.log(1000*gr); if(isFinite(p)){ ps[i]=p; nw++; } }
+    let ps,W,H,nw;
+    if(comp && sdbScenes.length>1){   // COMPOSITO: media pSDB sulle migliori K scene senza nuvole
+      const K=Math.min(3,sdbScenes.length); let acc=null,cnt=null,used=[];
+      for(let s=0;s<K;s++){ $('info').innerHTML='SDB composito: scena '+(s+1)+'/'+K+'&hellip;';
+        const r=await readPSDB(sdbScenes[s],bnds).catch(()=>null); if(!r||r.nw<50) continue;
+        if(!acc){ W=r.W;H=r.H; acc=new Float64Array(W*H); cnt=new Uint16Array(W*H); }
+        for(let i=0;i<W*H;i++) if(!isNaN(r.ps[i])){ acc[i]+=r.ps[i]; cnt[i]++; }
+        used.push(sdbScenes[s].properties.datetime.slice(0,10)); }
+      if(!acc) throw new Error('composito non riuscito (zoom sul mare)');
+      ps=new Float32Array(W*H).fill(NaN); nw=0;
+      for(let i=0;i<W*H;i++) if(cnt[i]>0){ ps[i]=acc[i]/cnt[i]; nw++; }
+      date='composito '+used.length+'x ('+used[used.length-1]+'…)'; cc='—';
+    } else {
+      const r=await readPSDB(feature,bnds); ps=r.ps;W=r.W;H=r.H;nw=r.nw;
+    }
     if(nw<50) throw new Error('poca acqua limpida (zoom sul mare)');
     $('info').innerHTML='SDB: calibro con EMODnet&hellip;';
     const eg=await emodnetGrid(bnds).catch(()=>null); let fit=null;
@@ -474,6 +497,7 @@ $('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='bl
     if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
   else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
+$('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[i]||sdbScenes[0]); } };
 
 // ================= SELETTORE LOCALITÀ =================
 const PLACES=[{n:'A9 (il mio spot)',lat:41.35002,lng:12.96553,z:16},{n:'Sabaudia',lat:41.2668,lng:13.0265,z:15},{n:'Ostia',lat:41.7250,lng:12.2750,z:14},
