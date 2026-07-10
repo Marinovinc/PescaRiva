@@ -44,6 +44,10 @@
   #profile .phd b{color:#16e0ff}
   #profile canvas{display:block;width:100%;height:96px}
   #profClose{background:none;border:none;color:#cfe0f2;font-size:15px;cursor:pointer;line-height:1}
+  #preyRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+  #preyRow .pchip{background:#0c2033;border:1px solid #23415f;border-radius:20px;padding:3px 9px;font-size:11.5px;color:#dfeaf5;white-space:nowrap}
+  #preyRow .pchip.warn{border-color:#ffb020;color:#ffd68a}
+  #preyRow .plab{font-size:11px;color:#8fb0cc;align-self:center;margin-right:2px}
   #btnMark.active{background:#1e3a63;border-color:#8dff3a}
   #btnGps.active{background:#1e3a63;border-color:#16e0ff;color:#fff}
   #btnCalib.active{background:#2a4d18;border-color:#8dff3a;color:#fff}
@@ -80,7 +84,8 @@
     <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:11px;padding:2px"></select></div>
     <label><input type="checkbox" id="lSub"> Substrato (sabbia/roccia)</label>
     <label><input type="checkbox" id="lPos"> Posidonia</label>
-    <div class="rng">Opacità <input type="range" id="ov" min="20" max="100" value="70"></div>
+    <div class="rng" title="Trasparenza della mappa di profondità (SDB + batimetria)">Prof. <input type="range" id="ovSdb" min="0" max="100" value="70"><span id="ovSdbV" style="min-width:34px;text-align:right;color:#16e0ff;font-weight:700">70%</span></div>
+    <div class="rng" title="Trasparenza di substrato e Posidonia">Habitat <input type="range" id="ovHab" min="0" max="100" value="70"><span id="ovHabV" style="min-width:34px;text-align:right;color:#16e0ff;font-weight:700">70%</span></div>
   </div>
   <div class="grp">
     <label><input type="checkbox" id="lRuler"> &#128207; Righello lancio</label>
@@ -97,7 +102,7 @@
 </div>
 
 <div id="legend"></div>
-<div id="profile"><div class="phd"><span id="profTxt"></span><button id="profClose" title="Chiudi">&#10005;</button></div><canvas id="profCv" width="900" height="192"></canvas></div>
+<div id="profile"><div class="phd"><span id="profTxt"></span><button id="profClose" title="Chiudi">&#10005;</button></div><canvas id="profCv" width="900" height="192"></canvas><div id="preyRow"></div></div>
 <div id="info"></div>
 <div id="markForm">
   <div class="mfHd"><b>&#128205; Punto / cattura</b><button id="mfClose" title="Chiudi">&#10005;</button></div>
@@ -151,7 +156,10 @@ const posidonia=L.tileLayer.wms(SBH,{layers:'seagrass_eov_poly_2025',format:'ima
 
 function bind(chk,layer){ $(chk).onchange=()=>{ if($(chk).checked) layer.addTo(map); else map.removeLayer(layer); updLegend(); }; }
 bind('lBathy',bathy); bind('lContours',contours); bind('lSub',substrate); bind('lPos',posidonia);
-$('ov').oninput=()=>{ const o=$('ov').value/100; bathy.setOpacity(o*0.8); substrate.setOpacity(o); posidonia.setOpacity(o); if(sdbOverlay) sdbOverlay.setOpacity(o); };
+// Due slider separati: profondità (SDB + batimetria) e habitat (substrato/Posidonia)
+function updSdbOv(){ const o=$('ovSdb').value/100; $('ovSdbV').textContent=$('ovSdb').value+'%'; bathy.setOpacity(o*0.8); if(sdbOverlay) sdbOverlay.setOpacity(o); }
+function updHabOv(){ const o=$('ovHab').value/100; $('ovHabV').textContent=$('ovHab').value+'%'; substrate.setOpacity(o); posidonia.setOpacity(o); }
+$('ovSdb').oninput=updSdbOv; $('ovHab').oninput=updHabOv;
 
 // ---- LEGENDA (mostra quando substrato/posidonia attivi) ----
 function updLegend(){
@@ -206,10 +214,31 @@ function sdbDepthAt(lat,lng){ if(!sdbGrid) return null; const g=sdbGrid,b=g.bnds
   if(lat>b.getNorth()||lat<b.getSouth()||lng<b.getWest()||lng>b.getEast()) return null;
   const px=Math.round((lng-b.getWest())/(b.getEast()-b.getWest())*(g.W-1)), py=Math.round((b.getNorth()-lat)/(b.getNorth()-b.getSouth())*(g.H-1));
   const z=g.depth[py*g.W+px]; return isFinite(z)?z:null; }
+// Prede probabili in funzione della distanza dalla riva (litorale sabbioso tirrenico, indicativo)
+const PREY=[
+  {n:'Mormora',e:'🐟',dmin:0,dmax:160,note:'sabbia e risacca, tutto l\'anno'},
+  {n:'Spigola',e:'🐟',dmin:0,dmax:90,note:'risacca, foci, sotto riva (mareggiata)'},
+  {n:'Leccia',e:'🐟',dmin:0,dmax:110,note:'predatore, estate sotto costa'},
+  {n:'Latterini/minutaglia',e:'🐟',dmin:0,dmax:30,note:'battigia, esche vive'},
+  {n:'Tracina',e:'⚠️',dmin:15,dmax:130,note:'infossata nella sabbia — velenosa, attenzione'},
+  {n:'Orata',e:'🐟',dmin:30,dmax:170,note:'sabbia, cerca molluschi'},
+  {n:'Occhiata',e:'🐟',dmin:30,dmax:160,note:'colonna d\'acqua, misto/roccia'},
+  {n:'Salpa',e:'🐟',dmin:20,dmax:120,note:'presso alga/Posidonia'},
+  {n:'Sarago',e:'🐟',dmin:40,dmax:220,note:'roccia/misto, scogliere'},
+  {n:'Ombrina',e:'🐟',dmin:80,dmax:260,note:'buche oltre la barra, spesso di notte'},
+  {n:'Gronco',e:'🐟',dmin:60,dmax:220,note:'roccia, di notte'},
+  {n:'Razza',e:'🐟',dmin:110,dmax:300,note:'sabbia profonda, di notte'}
+];
+function renderPrey(distM){ const row=$('preyRow'); if(distM==null||!isFinite(distM)){ row.innerHTML=''; return; }
+  const list=PREY.filter(p=>distM>=p.dmin-10 && distM<=p.dmax+10);
+  row.innerHTML='<span class="plab">Prede probabili a '+fmtM(distM)+':</span>'+
+    (list.length?list.map(p=>'<span class="pchip'+(p.e==='⚠️'?' warn':'')+'" title="'+p.note.replace(/"/g,'')+'">'+p.e+' '+p.n+'</span>').join('')
+      :'<span class="plab">oltre le specie tipiche da riva</span>'); }
 // Profilo del fondale lungo la linea di lancio
 function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');
   let total=0; const segD=[0]; for(let i=1;i<pts.length;i++){ total+=map.distance(pts[i-1],pts[i]); segD.push(total); }
   if(total<=0){ $('profile').style.display='none'; return; }
+  renderPrey(total);
   const N=140, samp=[]; let anyDepth=false, maxDepth=0;
   for(let k=0;k<=N;k++){ const dd=total*k/N; let si=1; while(si<pts.length&&segD[si]<dd) si++;
     const a=pts[si-1], q=pts[si]||pts[si-1], segLen=(segD[si]-segD[si-1])||1, t=(dd-segD[si-1])/segLen;
@@ -361,7 +390,7 @@ async function loadSDB(feature){
       im.data[i*4]=c[0]; im.data[i*4+1]=c[1]; im.data[i*4+2]=c[2]; im.data[i*4+3]=210; }
     ctx.putImageData(im,0,0);
     if(sdbOverlay) map.removeLayer(sdbOverlay);
-    sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ov').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
+    sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ovSdb').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
     sdbGrid={depth,W,H,bnds,calib,calibSrc,nManual};
     try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:cv.toDataURL(),n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
     $('info').innerHTML='<b>SDB '+(calib?'calibrata (m)':'relativa')+'</b> '+date+' &middot; nuvole '+cc+'% &middot; '+
@@ -372,7 +401,7 @@ async function loadSDB(feature){
 // Ripristina l'ultima SDB salvata (senza campo, in spiaggia): mostra l'immagine + isobate già calcolate
 function restoreOfflineSDB(){ try{ const s=JSON.parse(localStorage.getItem('pr_sdb_offline')||'null'); if(!s||!s.url) return false;
   if(sdbOverlay) map.removeLayer(sdbOverlay);
-  sdbOverlay=L.imageOverlay(s.url,[[s.s,s.w],[s.n,s.e]],{opacity:$('ov').value/100,attribution:'SDB offline (stima Sentinel-2)'}).addTo(map);
+  sdbOverlay=L.imageOverlay(s.url,[[s.s,s.w],[s.n,s.e]],{opacity:$('ovSdb').value/100,attribution:'SDB offline (stima Sentinel-2)'}).addTo(map);
   if($('lSdb')) $('lSdb').checked=true;
   $('info').style.display='block'; $('info').innerHTML='<b>SDB da cache offline</b> '+(s.date||'')+' &middot; <span class="sub">'+(s.calib?'isobate -2/-5/-10/-15 m':'profondità relativa')+' &middot; stima Sentinel-2 (senza rete)</span>';
   return true; }catch(e){ return false; } }
