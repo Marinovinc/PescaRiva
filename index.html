@@ -397,7 +397,8 @@ $('place').onchange=()=>{ const v=$('place').value; if(!v) return; let p; if(v[0
 $('btnAddPlace').onclick=()=>{ const nm=prompt('Nome della località (es. "Spot pennello nord"):'); if(!nm) return;
   const c=map.getCenter(), cp=customPlaces(); cp.push({n:nm.trim().slice(0,40),lat:c.lat,lng:c.lng,z:map.getZoom()});
   localStorage.setItem('pr_places',JSON.stringify(cp)); populatePlaces();
-  $('info').style.display='block'; $('info').innerHTML='&#11088; Localit&agrave; "<b>'+nm+'</b>" salvata'; setTimeout(()=>$('info').style.display='none',2500); };
+  $('info').style.display='block'; $('info').innerHTML='&#11088; Localit&agrave; "<b>'+nm+'</b>" salvata';
+  if(typeof preloadAll==='function' && navigator.onLine) setTimeout(preloadAll,600); else setTimeout(()=>$('info').style.display='none',2500); };
 populatePlaces();
 
 // ================= CALIBRAZIONE PROFONDITÀ (punti noti dalla carta nautica / scandaglio) =================
@@ -492,17 +493,24 @@ $('btnOffline').onclick=async()=>{ if(!('caches' in window)){ $('info').style.di
   try{ localStorage.setItem('pr_offline_zone',JSON.stringify({n:b.getNorth(),s:b.getSouth(),e:b.getEast(),w:b.getWest(),z,tiles:list.length})); }catch(_){}
   $('info').innerHTML='&#9989; <b>Zona salvata offline</b>: '+list.length+' tessere'+(hasSdb?' + SDB':'')+'. Qui la mappa funziona anche senza campo.'; setTimeout(()=>$('info').style.display='none',6000); };
 
-// ---- Preload automatico della zona A9 al primo avvio (una volta sola, in background) ----
-async function preloadA9(){ try{
-  if(!('caches' in window) || !navigator.onLine || localStorage.getItem('pr_a9_cached')) return;
-  const d=0.016, b=L.latLngBounds([[41.35002-d,12.96553-d],[41.35002+d,12.96553+d]]);  // ~riquadro 3.5 km attorno ad A9
+// ---- Preload automatico zone offline (una volta per zona, in background) ----
+async function preloadZone(lat,lng,label){ const d=0.016, b=L.latLngBounds([[lat-d,lng-d],[lat+d,lng+d]]);  // ~riquadro 3.5 km
   const list=tilesForBounds(b,13,17).slice(0,500);
-  $('info').style.display='block'; $('info').innerHTML='&#11015; Preparo la zona <b>A9</b> per l\'uso offline&hellip;';
-  const n=await cacheTiles(list,(dn,t)=>{ $('info').innerHTML='&#11015; Preparo <b>A9</b> offline&hellip; '+dn+'/'+t+' tessere'; });
-  localStorage.setItem('pr_a9_cached','1');
-  $('info').innerHTML='&#9989; <b>Zona A9 pronta offline</b> ('+n+' tessere). Funziona anche senza campo.'; setTimeout(()=>{ if($('info').innerHTML.indexOf('A9 pronta')>=0) $('info').style.display='none'; },5000);
+  $('info').style.display='block'; $('info').innerHTML='&#11015; Preparo <b>'+label+'</b> per l\'uso offline&hellip;';
+  const n=await cacheTiles(list,(dn,t)=>{ $('info').innerHTML='&#11015; Preparo <b>'+label+'</b> offline&hellip; '+dn+'/'+t+' tessere'; });
+  $('info').innerHTML='&#9989; <b>'+label+' pronta offline</b> ('+n+' tessere).';
+  setTimeout(()=>{ if($('info').innerHTML.indexOf('pronta offline')>=0) $('info').style.display='none'; },4500); return n; }
+function placeKey(p){ return p.n+'@'+(+p.lat).toFixed(4)+','+(+p.lng).toFixed(4); }
+// Preload della zona A9 + di tutte le località salvate non ancora in cache
+async function preloadAll(){ try{
+  if(!('caches' in window) || !navigator.onLine) return;
+  if(!localStorage.getItem('pr_a9_cached')){ await preloadZone(41.35002,12.96553,'A9'); localStorage.setItem('pr_a9_cached','1'); }
+  let done; try{ done=JSON.parse(localStorage.getItem('pr_places_cached')||'[]'); }catch(e){ done=[]; }
+  for(const p of (typeof customPlaces==='function'?customPlaces():[])){ if(!navigator.onLine) break;
+    const k=placeKey(p); if(done.includes(k)) continue;
+    await preloadZone(p.lat,p.lng,p.n); done.push(k); localStorage.setItem('pr_places_cached',JSON.stringify(done)); }
 }catch(e){} }
-setTimeout(preloadA9, 6000);  // dopo il caricamento iniziale della mappa, per non competere con le tessere a schermo
+setTimeout(preloadAll, 6000);  // dopo il caricamento iniziale della mappa, per non competere con le tessere a schermo
 
 $('btnHome').onclick=()=>{ const c=map.getCenter(); localStorage.setItem('pr_home',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));
   $('info').style.display='block'; $('info').innerHTML='&#127968; Vista salvata come partenza (si apre qui la prossima volta)'; setTimeout(()=>$('info').style.display='none',2800); };
