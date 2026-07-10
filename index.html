@@ -232,28 +232,31 @@ function sdbDepthAt(lat,lng){ if(!sdbGrid) return null; const g=sdbGrid,b=g.bnds
 // sub: substrati preferiti (sabbia/misto/roccia/posidonia/fango) o 'any'. mesi: mesi di presenza/attivita' (1-12).
 const A=[1,2,3,4,5,6,7,8,9,10,11,12];
 const PREY=[
-  {n:'Mormora',e:'🐟',dmin:0,dmax:160,sub:['sabbia','misto'],mesi:A,note:'sabbia e risacca, tutto l\'anno — arenicola/coreano'},
-  {n:'Spigola',e:'🐟',dmin:0,dmax:90,sub:['any'],mesi:[1,2,3,4,10,11,12],note:'risacca, foci, mareggiata — autunno/inverno'},
-  {n:'Orata',e:'🐟',dmin:30,dmax:170,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10,11],note:'sabbia, cerca molluschi — tarda primavera/autunno'},
-  {n:'Cefalo/Muggine',e:'🐟',dmin:0,dmax:80,sub:['any'],mesi:A,note:'sottoriva, foci e canali — pane/bigattino'},
-  {n:'Sogliola',e:'🐟',dmin:10,dmax:150,sub:['sabbia','fango'],mesi:[10,11,12,1,2,3,4],note:'piatto di sabbia, spesso di notte'},
-  {n:'Rombo',e:'🐟',dmin:40,dmax:250,sub:['sabbia','misto'],mesi:[3,4,5,6,9,10,11],note:'piatto predatore in agguato nella sabbia'},
-  {n:'Seppia',e:'🦑',dmin:0,dmax:120,sub:['sabbia','posidonia','misto'],mesi:[2,3,4,5,6,9,10],note:'primavera sotto costa — seppiara/totanara'},
-  {n:'Calamaro',e:'🦑',dmin:0,dmax:150,sub:['any'],mesi:[9,10,11,12,1,2],note:'autunno-inverno, di notte — totanara'},
-  {n:'Polpo',e:'🐙',dmin:0,dmax:120,sub:['roccia','misto','posidonia'],mesi:A,note:'roccia/misto — polpara, meglio in autunno'},
-  {n:'Aguglia',e:'🐟',dmin:0,dmax:120,sub:['any'],mesi:[4,5,6,7,8,9],note:'in superficie, a galleggiante — primavera/estate'},
-  {n:'Leccia',e:'🐟',dmin:0,dmax:110,sub:['any'],mesi:[6,7,8,9],note:'predatore, estate sotto costa'},
-  {n:'Latterini/minutaglia',e:'🐟',dmin:0,dmax:30,sub:['any'],mesi:A,note:'battigia, esche vive'},
-  {n:'Tracina',e:'⚠️',dmin:15,dmax:130,sub:['sabbia'],mesi:[5,6,7,8,9,10],note:'infossata nella sabbia — velenosa, attenzione'},
-  {n:'Occhiata',e:'🐟',dmin:30,dmax:160,sub:['roccia','misto','posidonia'],mesi:A,note:'colonna d\'acqua, misto/roccia'},
-  {n:'Salpa',e:'🐟',dmin:20,dmax:120,sub:['posidonia','roccia'],mesi:[4,5,6,7,8,9,10],note:'erbivora, presso alga/Posidonia'},
-  {n:'Sarago',e:'🐟',dmin:40,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia/misto, scogliere — grossi in autunno/inverno'},
-  {n:'Anguilla',e:'🐟',dmin:0,dmax:60,sub:['sabbia','fango'],mesi:[3,4,9,10,11],note:'foci e canali di Sabaudia, di notte'},
-  {n:'Ombrina',e:'🐟',dmin:80,dmax:260,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10],note:'buche oltre la barra, spesso di notte'},
-  {n:'Gronco',e:'🐟',dmin:60,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia, di notte'},
-  {n:'Razza',e:'🐟',dmin:110,dmax:300,sub:['sabbia','fango'],mesi:[1,2,3,10,11,12],note:'sabbia profonda, di notte — mesi freddi'}
+  {n:'Mormora',e:'🐟',dmin:0,dmax:160,sub:['sabbia','misto'],mesi:A,note:'sabbia e risacca, tutto l\'anno',esca:'arenicola, coreano, bibi — a fondo (surfcasting), finale lungo con perline'},
+  {n:'Spigola',e:'🐟',dmin:0,dmax:90,sub:['any'],mesi:[1,2,3,4,10,11,12],note:'risacca, foci, mareggiata — autunno/inverno',esca:'pesce vivo/latterino, bibi, artificiali (minnow) — a fondo o a spinning in risacca'},
+  {n:'Orata',e:'🐟',dmin:30,dmax:170,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10,11],note:'sabbia, cerca molluschi — tarda primavera/autunno',esca:'cannolicchio, cozza, gambero, bibi — a fondo, terminale robusto (denti forti)'},
+  {n:'Cefalo/Muggine',e:'🐟',dmin:0,dmax:80,sub:['any'],mesi:A,note:'sottoriva, foci e canali',esca:'pane, bigattino, pasta — a galleggiante leggero, amo piccolo'},
+  {n:'Sogliola',e:'🐟',dmin:10,dmax:150,sub:['sabbia','fango'],mesi:[10,11,12,1,2,3,4],note:'piatto di sabbia, spesso di notte',esca:'arenicola, coreano, camola di miele — a fondo lento, di notte'},
+  {n:'Rombo',e:'🐟',dmin:40,dmax:250,sub:['sabbia','misto'],mesi:[3,4,5,6,9,10,11],note:'piatto predatore in agguato nella sabbia',esca:'pesce esca vivo (latterino), striscia di calamaro — a fondo o traina leggera'},
+  {n:'Seppia',e:'🦑',dmin:0,dmax:120,sub:['sabbia','posidonia','misto'],mesi:[2,3,4,5,6,9,10],note:'primavera sotto costa',esca:'seppiara/totanara con pesce finto — a strappi lenti da riva/molo'},
+  {n:'Calamaro',e:'🦑',dmin:0,dmax:150,sub:['any'],mesi:[9,10,11,12,1,2],note:'autunno-inverno, di notte',esca:'totanara luminosa — di notte da molo/riva, recupero a scatti'},
+  {n:'Polpo',e:'🐙',dmin:0,dmax:120,sub:['roccia','misto','posidonia'],mesi:A,note:'roccia/misto — meglio in autunno',esca:'polpara con esca (pesce/granchio) — a saltelli sul fondo roccioso'},
+  {n:'Aguglia',e:'🐟',dmin:0,dmax:120,sub:['any'],mesi:[4,5,6,7,8,9],note:'in superficie — primavera/estate',esca:'pezzetto di sarda/bianchetto — a galleggiante in superficie'},
+  {n:'Leccia',e:'🐟',dmin:0,dmax:110,sub:['any'],mesi:[6,7,8,9],note:'predatore, estate sotto costa',esca:'artificiali (pesciolino/spoon), pesce vivo — a spinning veloce'},
+  {n:'Latterini/minutaglia',e:'🐟',dmin:0,dmax:30,sub:['any'],mesi:A,note:'battigia',esca:'amo piccolo con bigattino, o rete a bilancia — utili anche come esca viva'},
+  {n:'Tracina',e:'⚠️',dmin:15,dmax:130,sub:['sabbia'],mesi:[5,6,7,8,9,10],note:'infossata nella sabbia — velenosa',esca:'non è preda target; abbocca a esche da fondo. ⚠️ aculei velenosi: slamala con cautela'},
+  {n:'Occhiata',e:'🐟',dmin:30,dmax:160,sub:['roccia','misto','posidonia'],mesi:A,note:'colonna d\'acqua, misto/roccia',esca:'pane, bigattino, gambero — a galleggiante, con pastura'},
+  {n:'Salpa',e:'🐟',dmin:20,dmax:120,sub:['posidonia','roccia'],mesi:[4,5,6,7,8,9,10],note:'erbivora, presso alga/Posidonia',esca:'pane, alga/verdura — a galleggiante presso la Posidonia'},
+  {n:'Sarago',e:'🐟',dmin:40,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia/misto, scogliere — grossi in autunno/inverno',esca:'gambero, cozza, granchio, arenicola — a fondo o galleggiante presso gli scogli'},
+  {n:'Anguilla',e:'🐟',dmin:0,dmax:60,sub:['sabbia','fango'],mesi:[3,4,9,10,11],note:'foci e canali di Sabaudia, di notte',esca:'verme/bibi, pezzo di pesce — a fondo di notte alle foci'},
+  {n:'Ombrina',e:'🐟',dmin:80,dmax:260,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10],note:'buche oltre la barra, spesso di notte',esca:'bibi grosso, arenicola, trancio di sarda — a fondo (surfcasting), spesso di notte'},
+  {n:'Gronco',e:'🐟',dmin:60,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia, di notte',esca:'trancio di sarda/calamaro/sgombro — a fondo robusto, di notte su roccia'},
+  {n:'Razza',e:'🐟',dmin:110,dmax:300,sub:['sabbia','fango'],mesi:[1,2,3,10,11,12],note:'sabbia profonda, di notte — mesi freddi',esca:'trancio di pesce/calamaro, sardina — a fondo, di notte'}
 ];
-function preyChip(p,off){ return '<span class="pchip'+(p.e==='⚠️'?' warn':'')+(off?' off':'')+'" title="'+p.note.replace(/"/g,'')+(off?' — fuori stagione ora':'')+'">'+p.e+' '+p.n+'</span>'; }
+function preyChip(p,off){ const i=PREY.indexOf(p); return '<span class="pchip'+(p.e==='⚠️'?' warn':'')+(off?' off':'')+'" onclick="prPreyPick('+i+')" title="tocca per l\'esca">'+p.e+' '+p.n+'</span>'; }
+window.prPreyPick=function(i){ const p=PREY[i]; if(!p) return; $('info').style.display='block';
+  $('info').innerHTML='🎣 <b>'+p.n+'</b> &middot; <span class="sub">'+p.note+'</span><br>Esca/tecnica: <b>'+p.esca+'</b>';
+  if(typeof infoT!=='undefined'){ clearTimeout(infoT); infoT=setTimeout(()=>$('info').style.display='none',14000); } };
 function seasonName(m){ return (m>=3&&m<=5)?'primavera':(m>=6&&m<=8)?'estate':(m>=9&&m<=11)?'autunno':'inverno'; }
 // Mappa una classe di habitat EUNIS/EMODnet in una categoria di substrato
 function habCat(s){ if(!s) return null; s=(''+s).toLowerCase();
@@ -284,7 +287,7 @@ function renderPrey(distM, subCat){ const row=$('preyRow'); if(distM==null||!isF
 // Scheda "Prede probabili" sempre accessibile, per fasce di distanza e filtrata per stagione
 const PZONES=[{t:'Sottoriva — 0-50 m',d:25},{t:'Media distanza — 50-120 m',d:85},{t:'Lontano — oltre 120 m',d:180}];
 function renderPreyPanel(){ const mo=new Date().getMonth()+1;
-  let h='<div class="psub">Stagione attuale: <b>'+seasonName(mo)+'</b> &middot; tutte le specie del litorale; quelle <span style="opacity:.5">in grigio</span> sono <b>fuori stagione ora</b>.</div>';
+  let h='<div class="psub">Stagione attuale: <b>'+seasonName(mo)+'</b> &middot; tutte le specie del litorale; quelle <span style="opacity:.5">in grigio</span> sono <b>fuori stagione ora</b>. <b>Tocca una specie</b> per vedere <b>esca e tecnica</b>.</div>';
   for(const z of PZONES){ const list=PREY.filter(p=>z.d>=p.dmin&&z.d<=p.dmax)
       .sort((a,b)=>(b.mesi.includes(mo)?1:0)-(a.mesi.includes(mo)?1:0));
     h+='<div class="pzone"><div class="pzt">'+z.t+'</div><div class="pchips">'+
