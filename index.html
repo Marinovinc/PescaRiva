@@ -97,6 +97,7 @@
     <label title="Composito: media di più scene Sentinel-2 senza nuvole -> meno onde/torbidità, più preciso (più lento)"><input type="checkbox" id="lSdbComp"> &nbsp;&nbsp;&#8627; composito multi-data (+preciso)</label>
     <label title="Linee di profondità (isobate) calcolate dalla SDB, con etichetta in metri"><input type="checkbox" id="lIso"> &nbsp;&nbsp;&#8627; linee batimetriche (isobate)</label>
     <label title="Linee ogni 0,5 m tra 0 e 2 m: la fascia della risacca (mormore/spigole)"><input type="checkbox" id="lIsoFine"> &nbsp;&nbsp;&nbsp;&nbsp;&#8627; fitte 0,5 m sottoriva (0-2 m)</label>
+    <label title="Rileva e colora i canaloni (truogoli/rip channel) piu' profondi tra le barre"><input type="checkbox" id="lCanal"> &nbsp;&nbsp;&#8627; canaloni (truogoli/rip)</label>
     <label><input type="checkbox" id="lContours" checked> Isobate EMODnet (offshore)</label>
     <label title="Carta nautica OpenSeaMap: segnali, boe, e scandagli dove mappati (ODbL)"><input type="checkbox" id="lSeamark"> Carta nautica (OpenSeaMap)</label>
     <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:11px;padding:2px"></select></div>
@@ -191,6 +192,7 @@ function updLegend(){
   const rows=[];
   if($('lPos').checked) rows.push(['#1a8f3c','Posidonia (prateria)']);
   if($('lSub').checked){ rows.push(['#f2e394','Sedimento fine / sabbia']); rows.push(['#c8a45a','Sabbia grossa / ghiaia']); rows.push(['#9a9a9a','Roccia / substrato duro']); rows.push(['#6b8fb5','Fango / infralitorale']); }
+  if($('lCanal')&&$('lCanal').checked){ rows.push(['#7e42e0','Canalone marcato (buca)']); rows.push(['#2e74f0','Canalone']); rows.push(['#56c8f0','Truogolo lieve']); rows.push(['#e8c478','Barra / secca']); }
   const el=$('legend');
   if(!rows.length){ el.style.display='none'; return; }
   el.innerHTML='<div style="color:#16e0ff;font-weight:700;margin-bottom:3px">Fondale</div>'+
@@ -500,6 +502,7 @@ async function loadSDB(feature){
     if($('lSdb').checked) sdbOverlay=L.imageOverlay(durl,bnds,{opacity:$('ovSdb').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);   // colore solo se richiesto
     sdbGrid={depth,W,H,bnds,calib,calibSrc,nManual};
     drawIsobaths();   // linee batimetriche (anche senza il colore)
+    drawCanaloni();   // colorazione canaloni/truogoli se attiva
     try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:durl,n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
     const onlyIso=!$('lSdb').checked;
     $('info').innerHTML='<b>'+(onlyIso?'Linee batimetriche':('SDB '+(calib?'calibrata (m)':'relativa')))+'</b> '+date+(onlyIso?'':' &middot; nuvole '+cc+'%')+' &middot; '+
@@ -520,7 +523,7 @@ $('lSdb').onchange=async()=>{ if($('lSdb').checked){
     try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()) return; }
     if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
   else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; }
-    if(!$('lIso').checked){ sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } $('sdbDateRow').style.display='none'; }
+    if(!$('lIso').checked && !$('lCanal').checked){ sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } if(canalOverlay){ map.removeLayer(canalOverlay); canalOverlay=null; } $('sdbDateRow').style.display='none'; }
     $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
 $('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[i]||sdbScenes[0]); } };
@@ -580,13 +583,44 @@ $('lIso').onchange=async()=>{
 };
 $('lIsoFine').onchange=()=>{ if($('lIsoFine').checked && !$('lIso').checked){ $('lIso').checked=true; $('lIso').onchange(); return; } drawIsobaths(); };
 
+// ---- CANALONI: rilievo = profondità locale - tendenza regionale; colora a fasce truogoli(deeper)/barre(shallower) ----
+let canalOverlay=null;
+function drawCanaloni(){
+  if(canalOverlay){ map.removeLayer(canalOverlay); canalOverlay=null; }
+  if(!($('lCanal')&&$('lCanal').checked) || !sdbGrid){ updLegend(); return; }
+  const g=sdbGrid,W=g.W,H=g.H,dp=g.depth,b=g.bnds;
+  let d=smoothDepth(dp,W,H,3); d=smoothDepth(d,W,H,3);       // togli il rumore fine (fasce pulite)
+  const rad=Math.max(12,Math.round(W/10));                  // scala regionale (rimuove barre/canali)
+  let trend=smoothDepth(d,W,H,rad); trend=smoothDepth(trend,W,H,rad);
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d'); const im=ctx.createImageData(W,H);
+  for(let i=0;i<W*H;i++){ if(isNaN(dp[i])||isNaN(d[i])||isNaN(trend[i])){ im.data[i*4+3]=0; continue; }
+    const r=d[i]-trend[i]; let c=null,al=0;                 // r<0 = più profondo del contorno = canalone/truogolo
+    if(r<=-1.2){ c=[126,66,224]; al=170; }                  // canalone marcato (buca)
+    else if(r<=-0.6){ c=[46,116,240]; al=150; }             // canalone
+    else if(r<=-0.28){ c=[86,200,240]; al=120; }            // truogolo lieve
+    else if(r>=0.5){ c=[232,196,120]; al=70; }              // barra/secca (tenue)
+    else { im.data[i*4+3]=0; continue; }
+    im.data[i*4]=c[0]; im.data[i*4+1]=c[1]; im.data[i*4+2]=c[2]; im.data[i*4+3]=al; }
+  ctx.putImageData(im,0,0);
+  canalOverlay=L.imageOverlay(cv.toDataURL(),b,{opacity:0.8,interactive:false}).addTo(map);
+  updLegend();
+}
+$('lCanal').onchange=async()=>{
+  if(!$('lCanal').checked){ drawCanaloni(); return; }
+  if(sdbGrid){ drawCanaloni(); return; }
+  $('info').style.display='block'; $('info').innerHTML='Cerco i canaloni&hellip;';
+  try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()){ return; } }
+  if(sdbScenes.length) loadSDB(sdbScenes[+($('sdbDate').value||0)]||sdbScenes[0]);
+  else { $('info').innerHTML='Nessuna scena satellitare qui'; $('lCanal').checked=false; }
+};
+
 // La SDB (Prof.) segue la parte visibile: allo spostamento/zoom si ricalcola per la nuova area
 let sdbMoveT=null;
 function coverFrac(v,g){ const iw=Math.max(0,Math.min(v.getEast(),g.getEast())-Math.max(v.getWest(),g.getWest())),
   ih=Math.max(0,Math.min(v.getNorth(),g.getNorth())-Math.max(v.getSouth(),g.getSouth())),
   va=(v.getEast()-v.getWest())*(v.getNorth()-v.getSouth()); return va>0?(iw*ih)/va:0; }
-map.on('moveend', ()=>{ if(!$('lSdb').checked && !$('lIso').checked) return; clearTimeout(sdbMoveT);
-  sdbMoveT=setTimeout(async ()=>{ if(sdbBusy||(!$('lSdb').checked && !$('lIso').checked)) return;
+map.on('moveend', ()=>{ if(!$('lSdb').checked && !$('lIso').checked && !$('lCanal').checked) return; clearTimeout(sdbMoveT);
+  sdbMoveT=setTimeout(async ()=>{ if(sdbBusy||(!$('lSdb').checked && !$('lIso').checked && !$('lCanal').checked)) return;
     if(map.getZoom()<12) return;                                   // troppo largo: SDB non ha senso
     const v=map.getBounds();
     if(sdbGrid && coverFrac(v,sdbGrid.bnds)>0.7) return;           // area ancora coperta: niente ricarico
