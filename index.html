@@ -36,6 +36,7 @@
   .leaflet-popup-content-wrapper{background:#0e2034;color:#dfeaf5;border:1px solid #1f3650}
   .leaflet-popup-tip{background:#0e2034;border:1px solid #1f3650}
   #btnMark.active{background:#1e3a63;border-color:#8dff3a}
+  #btnGps.active{background:#1e3a63;border-color:#16e0ff;color:#fff}
   #markForm{position:fixed;z-index:1200;left:50%;bottom:10px;transform:translateX(-50%);width:min(94vw,360px);
     background:rgba(10,22,38,.98);border:1px solid #1f3650;border-radius:12px;padding:12px 14px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.6)}
   #markForm .mfHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -74,6 +75,10 @@
     <label><input type="checkbox" id="lMarks" checked> &#128205; I miei punti/catture</label>
     <button id="btnMark" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#8dff3a;font-weight:700;font-size:12px;cursor:pointer">&#10133; Segna punto / cattura</button>
   </div>
+  <div class="grp">
+    <button id="btnGps" style="width:100%;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:700;font-size:12px;cursor:pointer">&#128205; Sei qui (GPS)</button>
+    <button id="btnHome" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #1f3650;background:#11243c;color:#dfeaf5;font-weight:600;font-size:11.5px;cursor:pointer">&#127968; Imposta partenza qui</button>
+  </div>
   <div class="hint">Tocca il mare per profondità e fondale.<br>Righello ON: tocca riva &rarr; meta.</div>
 </div>
 
@@ -100,7 +105,8 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const map=L.map('map',{center:[41.2668,13.0265],zoom:16,zoomControl:true,attributionControl:true});   // Litorale di Sabaudia (Circeo) - spot ville/pineta
+const map=L.map('map',{center:[41.2668,13.0265],zoom:16,zoomControl:true,attributionControl:true});   // Litorale di Sabaudia (Circeo) - spot ville/pineta (default)
+try{ const _h=JSON.parse(localStorage.getItem('pr_home')||'null'); if(_h&&isFinite(_h.lat)) map.setView([_h.lat,_h.lng],_h.z||16); }catch(e){}   // partenza personalizzata salvata dall'utente
 map.attributionControl.setPrefix('PescaRiva');
 
 // ---- BASI ----
@@ -345,6 +351,31 @@ $('btnMark').onclick=()=>{ marking=!marking; $('btnMark').classList.toggle('acti
   $('info').style.display='block'; $('info').innerHTML=marking?'<b>Segna punto</b>: tocca sulla mappa dove hai pescato/catturato':''; if(!marking)$('info').style.display='none'; };
 $('lMarks').onchange=renderMarks;
 renderMarks();
+
+// ---- "Imposta partenza qui": salva la vista corrente come apertura dell'app ----
+$('btnHome').onclick=()=>{ const c=map.getCenter(); localStorage.setItem('pr_home',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));
+  $('info').style.display='block'; $('info').innerHTML='&#127968; Vista salvata come partenza (si apre qui la prossima volta)'; setTimeout(()=>$('info').style.display='none',2800); };
+
+// ---- "Sei qui" (GPS reale) ----
+let gpsMark=null, gpsAcc=null, gpsWatch=null, gpsCentered=false;
+$('btnGps').onclick=()=>{
+  if(gpsWatch!=null){ navigator.geolocation.clearWatch(gpsWatch); gpsWatch=null;
+    if(gpsMark){map.removeLayer(gpsMark);gpsMark=null;} if(gpsAcc){map.removeLayer(gpsAcc);gpsAcc=null;}
+    $('btnGps').classList.remove('active'); $('info').style.display='none'; return; }
+  if(!navigator.geolocation){ $('info').style.display='block'; $('info').innerHTML='GPS non disponibile su questo dispositivo'; return; }
+  $('btnGps').classList.add('active'); gpsCentered=false;
+  $('info').style.display='block'; $('info').innerHTML='&#128205; Cerco la tua posizione GPS&hellip;';
+  gpsWatch=navigator.geolocation.watchPosition(p=>{
+    const la=p.coords.latitude, lo=p.coords.longitude, ac=p.coords.accuracy||30, ll=[la,lo];
+    if(!gpsMark){ gpsMark=L.circleMarker(ll,{radius:8,color:'#fff',fillColor:'#16e0ff',fillOpacity:1,weight:3}).addTo(map);
+      gpsAcc=L.circle(ll,{radius:ac,color:'#16e0ff',fillColor:'#16e0ff',fillOpacity:0.1,weight:1}).addTo(map); }
+    else { gpsMark.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(ac); }
+    gpsMark.bindPopup('&#128205; Sei qui &middot; &plusmn;'+Math.round(ac)+' m');
+    if(!gpsCentered){ gpsCentered=true; map.setView(ll,Math.max(map.getZoom(),16)); }
+    $('info').innerHTML='&#128205; <b>Sei qui</b> &middot; &plusmn;'+Math.round(ac)+' m &middot; <span class="sub">'+la.toFixed(5)+', '+lo.toFixed(5)+'</span>';
+  }, e=>{ $('info').style.display='block'; $('info').innerHTML='GPS: '+((e&&e.message)||'permesso negato'); $('btnGps').classList.remove('active'); if(gpsWatch){navigator.geolocation.clearWatch(gpsWatch);gpsWatch=null;} },
+  {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
+};
 </script>
 <script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
