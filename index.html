@@ -35,6 +35,15 @@
   .hint{color:#8fb0cc;font-size:11px;margin-top:4px}
   .leaflet-popup-content-wrapper{background:#0e2034;color:#dfeaf5;border:1px solid #1f3650}
   .leaflet-popup-tip{background:#0e2034;border:1px solid #1f3650}
+  #panelOpen{position:fixed;z-index:1001;top:8px;right:8px;display:none;align-items:center;gap:6px;cursor:pointer;
+    background:rgba(10,22,38,.94);border:1px solid #16e0ff;border-radius:10px;padding:8px 12px;color:#16e0ff;font-weight:800;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  #panelHide{float:right;font-weight:800;font-size:13px;color:#8fb0cc;background:none;border:none;cursor:pointer;line-height:1;padding:0 2px;margin-left:6px}
+  #profile{position:fixed;z-index:1001;left:8px;right:8px;bottom:8px;max-width:520px;background:rgba(10,22,38,.96);border:1px solid #1f3650;
+    border-radius:10px;padding:7px 10px 4px;display:none;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  #profile .phd{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:3px}
+  #profile .phd b{color:#16e0ff}
+  #profile canvas{display:block;width:100%;height:96px}
+  #profClose{background:none;border:none;color:#cfe0f2;font-size:15px;cursor:pointer;line-height:1}
   #btnMark.active{background:#1e3a63;border-color:#8dff3a}
   #btnGps.active{background:#1e3a63;border-color:#16e0ff;color:#fff}
   #btnCalib.active{background:#2a4d18;border-color:#8dff3a;color:#fff}
@@ -58,8 +67,9 @@
 <div id="map"></div>
 <div id="title">PescaRiva &mdash; A9<br><small>litorale &middot; primi 200&ndash;300 m</small></div>
 
+<div id="panelOpen">&#9776; Comandi</div>
 <div id="panel">
-  <h4>Livelli <a href="guida.html" style="float:right;font-weight:600;font-size:11px;color:#16e0ff;text-decoration:none;border:1px solid #16e0ff;border-radius:6px;padding:1px 8px">&#10067; Guida</a></h4>
+  <h4>Livelli <button id="panelHide" title="Nascondi il pannello">&#10005;</button><a href="guida.html" style="float:right;font-weight:600;font-size:11px;color:#16e0ff;text-decoration:none;border:1px solid #16e0ff;border-radius:6px;padding:1px 8px">&#10067; Guida</a></h4>
   <div class="rng" style="margin-bottom:8px"><select id="place" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:12px;padding:3px"></select><button id="btnAddPlace" title="Salva questo punto come nuova localit&agrave;" style="margin-left:5px;padding:3px 10px;border-radius:6px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:800;cursor:pointer">&#43;</button></div>
   <label><input type="radio" name="base" id="baseSat" checked> Satellitare (vedi il fondale)</label>
   <label><input type="radio" name="base" id="baseOsm"> Mappa (OSM)</label>
@@ -87,6 +97,7 @@
 </div>
 
 <div id="legend"></div>
+<div id="profile"><div class="phd"><span id="profTxt"></span><button id="profClose" title="Chiudi">&#10005;</button></div><canvas id="profCv" width="900" height="192"></canvas></div>
 <div id="info"></div>
 <div id="markForm">
   <div class="mfHd"><b>&#128205; Punto / cattura</b><button id="mfClose" title="Chiudi">&#10005;</button></div>
@@ -111,6 +122,12 @@
 const $=id=>document.getElementById(id);
 const map=L.map('map',{center:[41.35002,12.96553],zoom:16,zoomControl:true,attributionControl:true});   // Punto A9 (spot dell'utente) - default
 try{ const _h=JSON.parse(localStorage.getItem('pr_home')||'null'); if(_h&&isFinite(_h.lat)) map.setView([_h.lat,_h.lng],_h.z||16); }catch(e){}   // partenza personalizzata salvata dall'utente
+
+// Pannello dei comandi a scomparsa (stato ricordato)
+function showPanel(open){ $('panel').style.display=open?'':'none'; $('panelOpen').style.display=open?'none':'flex'; localStorage.setItem('pr_panel',open?'open':'closed'); }
+$('panelHide').onclick=()=>showPanel(false);
+$('panelOpen').onclick=()=>showPanel(true);
+if(localStorage.getItem('pr_panel')==='closed') showPanel(false);
 map.attributionControl.setPrefix('PescaRiva');
 
 // ---- BASI ----
@@ -181,13 +198,46 @@ function drawRuler(){
   if(rulerLine){ map.removeLayer(rulerLine); rulerLine=null; } rulerMarks.forEach(m=>map.removeLayer(m)); rulerMarks=[];
   if(rulerPts.length>=2) rulerLine=L.polyline(rulerPts,{color:'#ff5be0',weight:3,dashArray:'6,5'}).addTo(map);
   rulerPts.forEach(p=>rulerMarks.push(L.circleMarker(p,{radius:5,color:'#fff',fillColor:'#ff5be0',fillOpacity:1,weight:1}).addTo(map)));
-  if(rulerPts.length>=2){ let t=0; for(let i=1;i<rulerPts.length;i++) t+=map.distance(rulerPts[i-1],rulerPts[i]);
-    $('info').style.display='block';
-    $('info').innerHTML='Distanza lancio: <b>'+fmtM(t)+'</b><br><span class="sub">'+rulerPts.length+' punti &middot; tocca ancora per estendere &middot; togli la spunta per azzerare</span>'; }
+  if(rulerPts.length>=2){ $('info').style.display='none'; drawProfile(rulerPts); }
+  else $('profile').style.display='none';
 }
+// Profondità SDB a un punto (metri negativi) o null
+function sdbDepthAt(lat,lng){ if(!sdbGrid) return null; const g=sdbGrid,b=g.bnds;
+  if(lat>b.getNorth()||lat<b.getSouth()||lng<b.getWest()||lng>b.getEast()) return null;
+  const px=Math.round((lng-b.getWest())/(b.getEast()-b.getWest())*(g.W-1)), py=Math.round((b.getNorth()-lat)/(b.getNorth()-b.getSouth())*(g.H-1));
+  const z=g.depth[py*g.W+px]; return isFinite(z)?z:null; }
+// Profilo del fondale lungo la linea di lancio
+function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');
+  let total=0; const segD=[0]; for(let i=1;i<pts.length;i++){ total+=map.distance(pts[i-1],pts[i]); segD.push(total); }
+  if(total<=0){ $('profile').style.display='none'; return; }
+  const N=140, samp=[]; let anyDepth=false, maxDepth=0;
+  for(let k=0;k<=N;k++){ const dd=total*k/N; let si=1; while(si<pts.length&&segD[si]<dd) si++;
+    const a=pts[si-1], q=pts[si]||pts[si-1], segLen=(segD[si]-segD[si-1])||1, t=(dd-segD[si-1])/segLen;
+    const lat=a[0]+(q[0]-a[0])*t, lng=a[1]+(q[1]-a[1])*t, z=sdbDepthAt(lat,lng);
+    samp.push({d:dd,z}); if(z!=null){ anyDepth=true; if(-z>maxDepth) maxDepth=-z; } }
+  ctx.clearRect(0,0,W,H);
+  if(!anyDepth){ $('profTxt').innerHTML='Lancio <b>'+fmtM(total)+'</b> &middot; attiva <b>SDB</b> per il profilo del fondale';
+    ctx.fillStyle='#8fb0cc'; ctx.font='22px system-ui'; ctx.textAlign='center'; ctx.fillText('nessuna profondità satellitare su questa linea',W/2,H/2); ctx.textAlign='left'; $('profile').style.display='block'; return; }
+  const padL=52,padR=12,padT=12,padB=22, plotW=W-padL-padR, plotH=H-padT-padB;
+  const dmax=Math.max(5,Math.ceil(maxDepth/2)*2), X=d=>padL+d/total*plotW, Y=m=>padT+(m/dmax)*plotH;
+  ctx.strokeStyle='#20344c'; ctx.lineWidth=1; ctx.fillStyle='#8fb0cc'; ctx.font='16px system-ui';
+  const marks=[0,2,5,10,15,20,30].filter(m=>m<=dmax); if(marks[marks.length-1]!==dmax) marks.push(dmax);
+  marks.forEach(m=>{ const y=Y(m); ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke(); ctx.fillText(m===0?'0':('-'+m),6,y+5); });
+  // riempimento acqua (superficie -> fondale)
+  ctx.beginPath(); ctx.moveTo(X(0),Y(0));
+  for(const s of samp) ctx.lineTo(X(s.d), s.z!=null?Y(-s.z):Y(0));
+  ctx.lineTo(X(total),Y(0)); ctx.closePath();
+  const grd=ctx.createLinearGradient(0,padT,0,padT+plotH); grd.addColorStop(0,'rgba(22,224,255,.32)'); grd.addColorStop(1,'rgba(8,36,72,.60)'); ctx.fillStyle=grd; ctx.fill();
+  // linea del fondale
+  ctx.beginPath(); let first=true; for(const s of samp){ if(s.z==null) continue; const x=X(s.d),y=Y(-s.z); if(first){ctx.moveTo(x,y);first=false;} else ctx.lineTo(x,y); }
+  ctx.strokeStyle='#16e0ff'; ctx.lineWidth=2.5; ctx.stroke();
+  const calib=sdbGrid&&sdbGrid.calib;
+  $('profTxt').innerHTML='<b>Profilo fondale</b> &middot; lancio '+fmtM(total)+' &middot; max &minus;'+maxDepth.toFixed(1)+' m'+(calib?'':' <span class="sub">(relativo)</span>');
+  $('profile').style.display='block'; }
+$('profClose').onclick=()=>{ $('profile').style.display='none'; };
 $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
-  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca dove sei sulla riva, poi la meta del lancio<br><span class="sub">tipico surfcasting 80&ndash;150 m</span>'; }
-  else $('info').style.display='none'; };
+  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca dove sei sulla riva, poi la meta del lancio<br><span class="sub">tipico surfcasting 80&ndash;150 m &middot; con SDB attiva vedi il profilo del fondale</span>'; }
+  else { $('info').style.display='none'; $('profile').style.display='none'; } };
 
 let infoT=null;
 map.on('click', async e=>{
