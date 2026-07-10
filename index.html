@@ -96,6 +96,7 @@
     <label title="Batimetria da satellite Sentinel-2 (10 m, sottocosta 0-18 m). Il metodo giusto per il sottocosta. Stima, non dato ufficiale."><input type="checkbox" id="lSdb"> <b style="color:#8dff3a">Profondità satellite 10 m (SDB)</b></label>
     <label title="Composito: media di più scene Sentinel-2 senza nuvole -> meno onde/torbidità, più preciso (più lento)"><input type="checkbox" id="lSdbComp"> &nbsp;&nbsp;&#8627; composito multi-data (+preciso)</label>
     <label title="Linee di profondità (isobate) calcolate dalla SDB, con etichetta in metri"><input type="checkbox" id="lIso"> &nbsp;&nbsp;&#8627; linee batimetriche (isobate)</label>
+    <label title="Linee ogni 0,5 m tra 0 e 2 m: la fascia della risacca (mormore/spigole)"><input type="checkbox" id="lIsoFine"> &nbsp;&nbsp;&nbsp;&nbsp;&#8627; fitte 0,5 m sottoriva (0-2 m)</label>
     <label><input type="checkbox" id="lContours" checked> Isobate EMODnet (offshore)</label>
     <label title="Carta nautica OpenSeaMap: segnali, boe, e scandagli dove mappati (ODbL)"><input type="checkbox" id="lSeamark"> Carta nautica (OpenSeaMap)</label>
     <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:11px;padding:2px"></select></div>
@@ -527,6 +528,7 @@ $('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=
 // ---- LINEE BATIMETRICHE (isobate vettoriali dalla SDB, marching squares) ----
 let isoOverlay=null;
 const ISO_LV=[-1,-2,-3,-4,-5,-7,-10,-15,-20];
+const ISO_LV_FINE=[-0.5,-1,-1.5,-2,-2.5,-3,-4,-5,-7,-10,-15,-20];
 function isoColor(L){ const t=Math.min(1,(-L)/20), r=Math.round(180-140*t), g=Math.round(245-140*t); return 'rgb('+r+','+g+',255)'; }
 // Liscia la griglia (box blur separabile, ignora NaN) -> curve continue invece di quadratini
 function smoothDepth(src,W,H,rad){
@@ -545,7 +547,8 @@ function drawIsobaths(){
   const ctx=cv.getContext('2d'); ctx.font='bold 15px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
   const gx=x=>x/(W-1)*CW, gy=y=>y/(H-1)*CH;
   const tab={1:[['B','L']],2:[['R','B']],3:[['R','L']],4:[['T','R']],5:[['T','R'],['B','L']],6:[['T','B']],7:[['T','L']],8:[['T','L']],9:[['T','B']],10:[['T','L'],['R','B']],11:[['T','R']],12:[['L','R']],13:[['R','B']],14:[['B','L']]};
-  for(const L of ISO_LV){ const segs=[];
+  const levels=($('lIsoFine')&&$('lIsoFine').checked)?ISO_LV_FINE:ISO_LV;
+  for(const L of levels){ const segs=[];
     for(let y=0;y<H-1;y++) for(let x=0;x<W-1;x++){
       const a=depth[y*W+x],bb=depth[y*W+x+1],c=depth[(y+1)*W+x+1],d=depth[(y+1)*W+x];
       if(isNaN(a)||isNaN(bb)||isNaN(c)||isNaN(d)) continue;
@@ -573,6 +576,7 @@ $('lIso').onchange=async()=>{
   if(sdbScenes.length) loadSDB(sdbScenes[+($('sdbDate').value||0)]||sdbScenes[0]);
   else { $('info').innerHTML='Nessuna scena satellitare qui per le linee'; $('lIso').checked=false; }
 };
+$('lIsoFine').onchange=()=>{ if($('lIsoFine').checked && !$('lIso').checked){ $('lIso').checked=true; $('lIso').onchange(); return; } drawIsobaths(); };
 
 // La SDB (Prof.) segue la parte visibile: allo spostamento/zoom si ricalcola per la nuova area
 let sdbMoveT=null;
