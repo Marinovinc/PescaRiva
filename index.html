@@ -37,6 +37,7 @@
   .leaflet-popup-tip{background:#0e2034;border:1px solid #1f3650}
   #btnMark.active{background:#1e3a63;border-color:#8dff3a}
   #btnGps.active{background:#1e3a63;border-color:#16e0ff;color:#fff}
+  #btnCalib.active{background:#2a4d18;border-color:#8dff3a;color:#fff}
   #markForm{position:fixed;z-index:1200;left:50%;bottom:10px;transform:translateX(-50%);width:min(94vw,360px);
     background:rgba(10,22,38,.98);border:1px solid #1f3650;border-radius:12px;padding:12px 14px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.6)}
   #markForm .mfHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -55,10 +56,11 @@
 </head>
 <body>
 <div id="map"></div>
-<div id="title">PescaRiva &mdash; Sabaudia<br><small>litorale &middot; primi 200&ndash;300 m</small></div>
+<div id="title">PescaRiva &mdash; A9<br><small>litorale &middot; primi 200&ndash;300 m</small></div>
 
 <div id="panel">
   <h4>Livelli <a href="guida.html" style="float:right;font-weight:600;font-size:11px;color:#16e0ff;text-decoration:none;border:1px solid #16e0ff;border-radius:6px;padding:1px 8px">&#10067; Guida</a></h4>
+  <div class="rng" style="margin-bottom:8px"><select id="place" style="flex:1;background:#11243c;color:#fff;border:1px solid #1f3650;border-radius:6px;font-size:12px;padding:3px"></select><button id="btnAddPlace" title="Salva questo punto come nuova localit&agrave;" style="margin-left:5px;padding:3px 10px;border-radius:6px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:800;cursor:pointer">&#43;</button></div>
   <label><input type="radio" name="base" id="baseSat" checked> Satellitare (vedi il fondale)</label>
   <label><input type="radio" name="base" id="baseOsm"> Mappa (OSM)</label>
   <div class="grp">
@@ -78,6 +80,7 @@
   <div class="grp">
     <button id="btnGps" style="width:100%;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:700;font-size:12px;cursor:pointer">&#128205; Sei qui (GPS)</button>
     <button id="btnHome" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #1f3650;background:#11243c;color:#dfeaf5;font-weight:600;font-size:11.5px;cursor:pointer">&#127968; Imposta partenza qui</button>
+    <button id="btnCalib" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #8dff3a;background:#11243c;color:#8dff3a;font-weight:700;font-size:11.5px;cursor:pointer">&#127919; Calibra profondit&agrave; (punto noto)</button>
     <button id="btnOffline" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #ffd54a;background:#11243c;color:#ffd54a;font-weight:700;font-size:11.5px;cursor:pointer">&#11015; Salva zona offline</button>
   </div>
   <div class="hint">Tocca il mare per profondità e fondale.<br>Righello ON: tocca riva &rarr; meta.</div>
@@ -106,7 +109,7 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const map=L.map('map',{center:[41.2668,13.0265],zoom:16,zoomControl:true,attributionControl:true});   // Litorale di Sabaudia (Circeo) - spot ville/pineta (default)
+const map=L.map('map',{center:[41.35002,12.96553],zoom:16,zoomControl:true,attributionControl:true});   // Punto A9 (spot dell'utente) - default
 try{ const _h=JSON.parse(localStorage.getItem('pr_home')||'null'); if(_h&&isFinite(_h.lat)) map.setView([_h.lat,_h.lng],_h.z||16); }catch(e){}   // partenza personalizzata salvata dall'utente
 map.attributionControl.setPrefix('PescaRiva');
 
@@ -189,6 +192,7 @@ $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
 let infoT=null;
 map.on('click', async e=>{
   const {lat,lng}=e.latlng;
+  if(calibrating){ addCalibPoint(e.latlng); return; }   // modo "calibra profondità con punto noto"
   if(marking){ openMarkForm(e.latlng); return; }   // modo "segna punto/cattura"
   if($('lRuler').checked){ rulerPts.push([lat,lng]); drawRuler(); return; }
   // Profondità dalla SDB satellitare (10 m) se disponibile e nel riquadro
@@ -239,6 +243,10 @@ function emodAt(g,lat,lon){ if(!g||lat>g.N||lat<g.S||lon<g.W||lon>g.E) return nu
 function linfit(xs,ys){ const n=xs.length; if(n<8) return null; let sx=0,sy=0,sxx=0,sxy=0;
   for(let i=0;i<n;i++){sx+=xs[i];sy+=ys[i];sxx+=xs[i]*xs[i];sxy+=xs[i]*ys[i];}
   const den=n*sxx-sx*sx; if(Math.abs(den)<1e-9) return null; const a=(n*sxy-sx*sy)/den; return {a,b:(sy-a*sx)/n}; }
+// fit minimi quadrati per la calibrazione manuale (pochi punti noti, min 2)
+function linfitN(xs,ys){ const n=xs.length; if(n<2) return null; let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){sx+=xs[i];sy+=ys[i];sxx+=xs[i]*xs[i];sxy+=xs[i]*ys[i];}
+  const den=n*sxx-sx*sx; if(Math.abs(den)<1e-9) return null; const a=(n*sxy-sx*sy)/den; return {a,b:(sy-a*sx)/n}; }
 async function readBand(url, bnds, epsgRef){
   const tif=await GeoTIFF.fromUrl(url); const img=await tif.getImage();
   const gk=img.getGeoKeys(); const epsg=gk.ProjectedCSTypeGeoKey||epsgRef; const zone=epsg-32600;
@@ -279,6 +287,17 @@ async function loadSDB(feature){
     if(eg){ const xs=[],ys=[]; for(let py=0;py<H;py+=2)for(let px=0;px<W;px+=2){ const p=ps[py*W+px]; if(isNaN(p))continue;
       const ed=emodAt(eg, yN-(py/(H-1))*(yN-yS), xW+(px/(W-1))*(xE-xW));
       if(ed!=null&&ed<-1&&ed>-25){ xs.push(p); ys.push(ed); } } fit=linfit(xs,ys); }
+    let calibSrc = (fit&&fit.a<0)?'EMODnet ~115 m':'', nManual=0;
+    // Calibrazione manuale: profondità note dell'utente (carta nautica/scandaglio) -> prevale su EMODnet
+    try{ const cp=JSON.parse(localStorage.getItem('pr_calib')||'[]'), cx=[],cy=[];
+      for(const c of cp){ if(c.lat>=yS&&c.lat<=yN&&c.lng>=xW&&c.lng<=xE){
+        let px=Math.round((c.lng-xW)/(xE-xW)*(W-1)), py=Math.round((yN-c.lat)/(yN-yS)*(H-1));
+        px=Math.max(0,Math.min(W-1,px)); py=Math.max(0,Math.min(H-1,py)); let pv=ps[py*W+px];
+        for(let r=1;r<=3&&isNaN(pv);r++)for(let dy=-r;dy<=r&&isNaN(pv);dy++)for(let dx=-r;dx<=r&&isNaN(pv);dx++){ const q=(py+dy)*W+(px+dx); if(q>=0&&q<W*H&&!isNaN(ps[q]))pv=ps[q]; }
+        if(!isNaN(pv)){ cx.push(pv); cy.push(-Math.abs(c.depth)); } } }
+      nManual=cx.length;
+      if(cx.length>=2){ const f=linfitN(cx,cy); if(f&&f.a<0){ fit=f; calibSrc='tua calibrazione ('+cx.length+' punti)'; } }
+    }catch(_){}
     const calib = !!(fit && fit.a<0);
     const depth=new Float32Array(W*H).fill(NaN);
     if(calib){ for(let i=0;i<W*H;i++) if(!isNaN(ps[i])) depth[i]=Math.min(0,fit.a*ps[i]+fit.b); }
@@ -293,10 +312,10 @@ async function loadSDB(feature){
     ctx.putImageData(im,0,0);
     if(sdbOverlay) map.removeLayer(sdbOverlay);
     sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ov').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
-    sdbGrid={depth,W,H,bnds,calib};
+    sdbGrid={depth,W,H,bnds,calib,calibSrc,nManual};
     try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:cv.toDataURL(),n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
     $('info').innerHTML='<b>SDB '+(calib?'calibrata (m)':'relativa')+'</b> '+date+' &middot; nuvole '+cc+'% &middot; '+
-      '<span class="sub">'+(calib?'isobate bianche -2/-5/-10/-15 m &middot; tocca per la profondità':'chiaro=basso, scuro=profondo (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
+      '<span class="sub">'+(calib?('isobate -2/-5/-10/-15 m &middot; base: '+calibSrc+' &middot; tocca per la profondità'):'chiaro=basso, scuro=profondo (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
   }catch(e){ if(restoreOfflineSDB()){ sdbBusy=false; return; } $('info').innerHTML='SDB non riuscita: '+e.message; if($('lSdb')) $('lSdb').checked=false; }
   sdbBusy=false;
 }
@@ -312,6 +331,44 @@ $('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='bl
     if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
   else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
+
+// ================= SELETTORE LOCALITÀ =================
+const PLACES=[{n:'A9 (il mio spot)',lat:41.35002,lng:12.96553,z:16},{n:'Sabaudia',lat:41.2668,lng:13.0265,z:15},{n:'Ostia',lat:41.7250,lng:12.2750,z:14},
+  {n:'Circeo (San Felice)',lat:41.2350,lng:13.0850,z:14},{n:'Anzio / Nettuno',lat:41.4400,lng:12.6300,z:14},
+  {n:'Forio (Ischia)',lat:40.7350,lng:13.8550,z:14},{n:'Terracina',lat:41.2850,lng:13.2400,z:14}];
+function customPlaces(){ try{ return JSON.parse(localStorage.getItem('pr_places')||'[]'); }catch(e){ return []; } }
+function populatePlaces(){ const cp=customPlaces();
+  $('place').innerHTML='<option value="">&mdash; Vai a una localit&agrave;&hellip; &mdash;</option>'+
+    PLACES.map((p,i)=>'<option value="p'+i+'">&#128205; '+p.n+'</option>').join('')+
+    (cp.length?('<optgroup label="Le mie localit&agrave;">'+cp.map((p,i)=>'<option value="c'+i+'">&#11088; '+p.n+'</option>').join('')+'</optgroup>'):''); }
+$('place').onchange=()=>{ const v=$('place').value; if(!v) return; let p; if(v[0]==='p') p=PLACES[+v.slice(1)]; else p=customPlaces()[+v.slice(1)];
+  if(p){ if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; sdbGrid=null; sdbScenes=[]; if($('lSdb'))$('lSdb').checked=false; $('sdbDateRow').style.display='none'; }
+    map.setView([p.lat,p.lng],p.z||14); } $('place').value=''; };
+$('btnAddPlace').onclick=()=>{ const nm=prompt('Nome della località (es. "Spot pennello nord"):'); if(!nm) return;
+  const c=map.getCenter(), cp=customPlaces(); cp.push({n:nm.trim().slice(0,40),lat:c.lat,lng:c.lng,z:map.getZoom()});
+  localStorage.setItem('pr_places',JSON.stringify(cp)); populatePlaces();
+  $('info').style.display='block'; $('info').innerHTML='&#11088; Localit&agrave; "<b>'+nm+'</b>" salvata'; setTimeout(()=>$('info').style.display='none',2500); };
+populatePlaces();
+
+// ================= CALIBRAZIONE PROFONDITÀ (punti noti dalla carta nautica / scandaglio) =================
+let calibrating=false, calibLayer=L.layerGroup().addTo(map);
+function calibPts(){ try{ return JSON.parse(localStorage.getItem('pr_calib')||'[]'); }catch(e){ return []; } }
+function renderCalib(){ calibLayer.clearLayers(); calibPts().forEach((c,i)=>{
+  L.circleMarker([c.lat,c.lng],{radius:6,color:'#0a2b00',fillColor:'#8dff3a',fillOpacity:1,weight:2}).addTo(calibLayer)
+   .bindPopup('&#127919; Punto noto: <b>'+Math.abs(c.depth)+' m</b><br><a href="#" onclick="prDelCalib('+i+');return false">elimina</a>'); }); }
+window.prDelCalib=function(i){ const cp=calibPts(); cp.splice(i,1); localStorage.setItem('pr_calib',JSON.stringify(cp)); map.closePopup(); renderCalib();
+  if(sdbScenes.length){ const j=+($('sdbDate').value||0); loadSDB(sdbScenes[j]||sdbScenes[0]); } };
+function addCalibPoint(ll){ const s=prompt('Profondità REALE di questo punto in metri\n(dalla carta nautica o dallo scandaglio):'); if(s==null) return;
+  const d=parseFloat(String(s).replace(',','.')); if(!isFinite(d)||d<=0){ alert('Inserisci un numero di metri, es. 4.5'); return; }
+  const cp=calibPts(); cp.push({lat:ll.lat,lng:ll.lng,depth:d}); localStorage.setItem('pr_calib',JSON.stringify(cp)); renderCalib();
+  const n=cp.length; $('info').style.display='block';
+  $('info').innerHTML='&#127919; Punto noto salvato ('+n+'). '+(n>=2?'Ricalcolo la profondit&agrave;&hellip;':'Servono almeno <b>2</b> punti per calibrare in metri.');
+  if(n>=2 && sdbScenes.length){ const j=+($('sdbDate').value||0); loadSDB(sdbScenes[j]||sdbScenes[0]); } else setTimeout(()=>$('info').style.display='none',4000); }
+$('btnCalib').onclick=()=>{ calibrating=!calibrating; $('btnCalib').classList.toggle('active',calibrating);
+  if(calibrating){ if(marking){ marking=false; if($('btnMark'))$('btnMark').classList.remove('active'); } if($('lRuler').checked)$('lRuler').checked=false;
+    $('info').style.display='block'; $('info').innerHTML='<b>&#127919; Calibrazione</b>: tocca un punto di cui <b>conosci la profondit&agrave;</b> e inseriscila.<br><span class="sub">servono almeno 2 punti &middot; migliora i metri assoluti della SDB</span>'; }
+  else $('info').style.display='none'; };
+renderCalib();
 </script>
 <script>
 // ================= PUNTI / CATTURE (marker con coordinate + specie, info del momento in automatico) =================
