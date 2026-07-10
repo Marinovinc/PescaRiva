@@ -60,6 +60,9 @@
   #preyPanel .pchip{background:#0c2033;border:1px solid #23415f;border-radius:20px;padding:3px 9px;font-size:12px;color:#dfeaf5}
   #preyPanel .pchip.warn{border-color:#ffb020;color:#ffd68a}
   #preyPanel .pchip.off{opacity:.42}
+  .ptime{display:flex;gap:6px;margin:2px 0 6px}
+  .ptime span{flex:1;text-align:center;cursor:pointer;font-size:12px;padding:6px 4px;border-radius:8px;border:1px solid #23415f;background:#0c2033;color:#cfe0f2}
+  .ptime span.on{background:#16e0ff;color:#04121e;border-color:#16e0ff;font-weight:700}
   #btnMark.active{background:#1e3a63;border-color:#8dff3a}
   #btnGps.active{background:#1e3a63;border-color:#16e0ff;color:#fff}
   #btnCalib.active{background:#2a4d18;border-color:#8dff3a;color:#fff}
@@ -117,7 +120,9 @@
 
 <div id="legend"></div>
 <div id="profile"><div class="phd"><span id="profTxt"></span><button id="profClose" title="Chiudi">&#10005;</button></div><canvas id="profCv" width="900" height="192"></canvas><div id="preyRow"></div></div>
-<div id="preyPanel"><div class="mfHd"><b>&#127907; Prede probabili &mdash; litorale di Sabaudia</b><button id="preyClose">&#10005;</button></div><div id="preyBody"></div></div>
+<div id="preyPanel"><div class="mfHd"><b>&#127907; Prede probabili &mdash; litorale di Sabaudia</b><button id="preyClose">&#10005;</button></div>
+<div id="preyTimeSel" class="ptime"><span data-t="all" class="on" onclick="setPreyTime('all')">Tutti</span><span data-t="g" onclick="setPreyTime('g')">&#9728;&#65039; Giorno</span><span data-t="n" onclick="setPreyTime('n')">&#127769; Notte</span></div>
+<div id="preyBody"></div></div>
 <div id="info"></div>
 <div id="markForm">
   <div class="mfHd"><b>&#128205; Punto / cattura</b><button id="mfClose" title="Chiudi">&#10005;</button></div>
@@ -255,10 +260,15 @@ const PREY=[
   {n:'Gronco',e:'🐟',dmin:60,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia, di notte',esca:'trancio di sarda/calamaro/sgombro — a fondo robusto, di notte su roccia'},
   {n:'Razza',e:'🐟',dmin:110,dmax:300,sub:['sabbia','fango'],mesi:[1,2,3,10,11,12],note:'sabbia profonda, di notte — mesi freddi',esca:'trancio di pesce/calamaro, sardina — a fondo, di notte'}
 ];
-function preyChip(p,off){ const i=PREY.indexOf(p); return '<span class="pchip'+(p.e==='⚠️'?' warn':'')+(off?' off':'')+'" onclick="prPreyPick('+i+')" title="tocca per l\'esca">'+p.e+' '+p.n+'</span>'; }
+function preyChip(p,off){ const i=PREY.indexOf(p); return '<span class="pchip'+(p.e==='⚠️'?' warn':'')+(off?' off':'')+'" onclick="prPreyPick('+i+')" title="tocca per l\'esca">'+p.e+' '+p.n+(p.orario==='n'?' 🌙':'')+'</span>'; }
 window.prPreyPick=function(i){ const p=PREY[i]; if(!p) return; $('info').style.display='block';
-  $('info').innerHTML='🎣 <b>'+p.n+'</b> &middot; <span class="sub">'+p.note+'</span><br>Esca/tecnica: <b>'+p.esca+'</b>';
+  $('info').innerHTML='🎣 <b>'+p.n+'</b> &middot; <span class="sub">'+({g:'☀️ giorno',n:'🌙 notte',gn:'☀️/🌙 giorno e notte'}[p.orario]||'')+'</span><br><span class="sub">'+p.note+'</span><br>Esca/tecnica: <b>'+p.esca+'</b>';
   if(typeof infoT!=='undefined'){ clearTimeout(infoT); infoT=setTimeout(()=>$('info').style.display='none',14000); } };
+// Orario di pesca per specie: g=giorno, n=notte, gn=entrambi (assegnato senza riscrivere il dataset)
+const PREY_TIME={Mormora:'gn',Spigola:'gn',Orata:'g','Cefalo/Muggine':'g',Sogliola:'n',Rombo:'gn',Seppia:'gn',Calamaro:'n',Polpo:'gn',Aguglia:'g',Leccia:'g','Latterini/minutaglia':'g',Tracina:'gn',Occhiata:'g',Salpa:'g',Sarago:'gn',Anguilla:'n',Ombrina:'n',Gronco:'n',Razza:'n'};
+PREY.forEach(p=>p.orario=PREY_TIME[p.n]||'gn');
+let preyTime='all';   // 'all' | 'g' | 'n'
+function matchTime(p){ return preyTime==='all' || (p.orario||'gn').includes(preyTime); }
 function seasonName(m){ return (m>=3&&m<=5)?'primavera':(m>=6&&m<=8)?'estate':(m>=9&&m<=11)?'autunno':'inverno'; }
 // Mappa una classe di habitat EUNIS/EMODnet in una categoria di substrato
 function habCat(s){ if(!s) return null; s=(''+s).toLowerCase();
@@ -281,21 +291,25 @@ function renderPrey(distM, subCat){ const row=$('preyRow'); if(distM==null||!isF
   const mo=new Date().getMonth()+1;
   let list=PREY.filter(p=>distM>=p.dmin-10 && distM<=p.dmax+10);          // 1) distanza
   list=list.filter(p=>p.mesi.includes(mo));                               // 2) stagione (mese corrente)
-  if(subCat){ const m=list.filter(p=>p.sub.includes('any')||p.sub.includes(subCat)); if(m.length) list=m; }  // 3) substrato (se noto)
+  list=list.filter(matchTime);                                           // 3) giorno/notte
+  if(subCat){ const m=list.filter(p=>p.sub.includes('any')||p.sub.includes(subCat)); if(m.length) list=m; }  // 4) substrato (se noto)
   list.sort((a,b)=>{ const as=subCat&&a.sub.includes(subCat)&&!a.sub.includes('any')?0:1, bs=subCat&&b.sub.includes(subCat)&&!b.sub.includes('any')?0:1; return as-bs; });
-  const hdr='Prede probabili a '+fmtM(distM)+' &middot; '+seasonName(mo)+(subCat?(' &middot; fondo '+(SUBLAB[subCat]||subCat)):' &middot; fondo n/d');
+  const tlab={all:'',g:' &middot; ☀️ giorno',n:' &middot; 🌙 notte'}[preyTime];
+  const hdr='Prede probabili a '+fmtM(distM)+' &middot; '+seasonName(mo)+(subCat?(' &middot; fondo '+(SUBLAB[subCat]||subCat)):' &middot; fondo n/d')+tlab;
   row.innerHTML='<span class="plab">'+hdr+':</span>'+
     (list.length?list.map(preyChip).join(''):'<span class="plab">poche specie di stagione a questa distanza</span>'); }
 // Scheda "Prede probabili" sempre accessibile, per fasce di distanza e filtrata per stagione
 const PZONES=[{t:'Sottoriva — 0-50 m',d:25},{t:'Media distanza — 50-120 m',d:85},{t:'Lontano — oltre 120 m',d:180}];
 function renderPreyPanel(){ const mo=new Date().getMonth()+1;
-  let h='<div class="psub">Stagione attuale: <b>'+seasonName(mo)+'</b> &middot; tutte le specie del litorale; quelle <span style="opacity:.5">in grigio</span> sono <b>fuori stagione ora</b>. <b>Tocca una specie</b> per vedere <b>esca e tecnica</b>.</div>';
-  for(const z of PZONES){ const list=PREY.filter(p=>z.d>=p.dmin&&z.d<=p.dmax)
+  let h='<div class="psub">Stagione attuale: <b>'+seasonName(mo)+'</b> &middot; quelle <span style="opacity:.5">in grigio</span> sono <b>fuori stagione ora</b>; 🌙 = specie da notte. <b>Tocca una specie</b> per esca e tecnica.</div>';
+  for(const z of PZONES){ const list=PREY.filter(p=>z.d>=p.dmin&&z.d<=p.dmax&&matchTime(p))
       .sort((a,b)=>(b.mesi.includes(mo)?1:0)-(a.mesi.includes(mo)?1:0));
     h+='<div class="pzone"><div class="pzt">'+z.t+'</div><div class="pchips">'+
-       (list.length?list.map(p=>preyChip(p,!p.mesi.includes(mo))).join(''):'<span class="psub">&mdash;</span>')+'</div></div>'; }
-  h+='<div class="psub" style="margin-top:8px">⚠️ tracina velenosa &middot; 🦑 seppia/calamaro e 🐙 polpo (cefalopodi) &middot; col <b>Righello lancio</b> le prede si affinano anche col <b>fondo</b> del punto d\'arrivo. Indicazione di massima: la presenza reale varia con orario, mareggiata e stagione.</div>';
-  $('preyBody').innerHTML=h; }
+       (list.length?list.map(p=>preyChip(p,!p.mesi.includes(mo))).join(''):'<span class="psub">&mdash; nessuna con questo filtro</span>')+'</div></div>'; }
+  h+='<div class="psub" style="margin-top:8px">⚠️ tracina velenosa &middot; 🦑 seppia/calamaro e 🐙 polpo &middot; col <b>Righello lancio</b> le prede si affinano anche col <b>fondo</b>. Indicazione di massima: varia con orario, mareggiata e stagione.</div>';
+  $('preyBody').innerHTML=h;
+  Array.from($('preyTimeSel').children).forEach(s=>s.classList.toggle('on',s.dataset.t===preyTime)); }
+function setPreyTime(t){ preyTime=t; renderPreyPanel(); if(rulerPts.length>=2) drawProfile(rulerPts); }
 $('btnPrey').onclick=()=>{ renderPreyPanel(); $('preyPanel').style.display='block'; };
 $('preyClose').onclick=()=>{ $('preyPanel').style.display='none'; };
 // Profilo del fondale lungo la linea di lancio
