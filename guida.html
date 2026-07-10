@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PescaRiva — Guida per iniziare</title>
+<style>
+  :root{--bg:#06121f;--card:#0e1f33;--line:#1f3650;--cy:#16e0ff;--txt:#dfeaf5;--sub:#8fb0cc}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(#06121f,#081a2c);color:#dfeaf5;font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:0 0 60px}
+  header{position:sticky;top:0;z-index:5;background:rgba(6,18,31,.92);backdrop-filter:blur(6px);border-bottom:1px solid #1f3650;padding:14px 18px}
+  header h1{margin:0;font-size:19px;letter-spacing:.2px}
+  header .t{color:#8fb0cc;font-size:12.5px;margin-top:2px}
+  .wrap{max-width:720px;margin:0 auto;padding:0 18px}
+  .lead{background:#0e1f33;border:1px solid #1f3650;border-radius:14px;padding:16px 18px;margin:18px 0}
+  .lead b{color:#16e0ff}
+  .step{background:#0e1f33;border:1px solid #1f3650;border-radius:14px;padding:16px 18px;margin:16px 0;overflow:hidden}
+  .step h2{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:17px}
+  .n{flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:#16e0ff;color:#04121e;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .step p{margin:8px 0;color:#cfe0f0}
+  .step img{display:block;width:100%;max-width:300px;margin:12px auto 4px;border-radius:12px;border:1px solid #24405f}
+  .cap{text-align:center;color:#8fb0cc;font-size:12px;margin:0 0 4px}
+  .tip{background:#12283f;border-left:3px solid #16e0ff;border-radius:8px;padding:9px 12px;margin:10px 0;font-size:14px;color:#bfd6ea}
+  .warn{background:#2a2413;border-left:3px solid #ffd54a;border-radius:8px;padding:9px 12px;margin:10px 0;font-size:14px;color:#e9dcae}
+  kbd{background:#11243c;border:1px solid #2a4870;border-radius:6px;padding:1px 7px;font-size:13px;color:#dfeaf5;white-space:nowrap}
+  .btnrow{text-align:center;margin:26px 0 8px}
+  a.cta{display:inline-block;background:#16e0ff;color:#04121e;font-weight:800;text-decoration:none;padding:13px 26px;border-radius:12px;font-size:16px}
+  ul{margin:8px 0;padding-left:20px}li{margin:4px 0;color:#cfe0f0}
+  .foot{color:#6f8aa6;font-size:12px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎣 PescaRiva — Guida per iniziare</h1>
+  <div class="t">Tutto quello che serve, spiegato passo passo. Nessuna esperienza richiesta.</div>
+</header>
+
+<div class="wrap">
+
+  <div class="lead">
+    <b>Cos'è.</b> PescaRiva ti mostra <b>com'è fatto il fondale sottocosta</b> — i primi 200-300 metri dove lanci le esche: profondità, secche e buche, tipo di fondo (sabbia/roccia/Posidonia). Puoi <b>segnare i punti buoni</b>, <b>registrare le catture</b> e usare la mappa <b>anche senza campo</b> in spiaggia.
+    <div class="warn" style="margin-top:12px">⚠️ Le profondità del satellite sono una <b>stima</b> (funzionano in acqua limpida fino a ~15-18 m). Servono a capire la <b>morfologia</b> del fondale, non a sostituire lo scandaglio.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">1</span> Aprila e installala sul telefono</h2>
+    <p>Apri il link nel browser del telefono (Chrome o Safari). Per averla come una vera app con l'icona:</p>
+    <ul>
+      <li><b>Android/Chrome:</b> menu <kbd>⋮</kbd> → <kbd>Aggiungi a schermata Home</kbd></li>
+      <li><b>iPhone/Safari:</b> pulsante <kbd>Condividi ↑</kbd> → <kbd>Aggiungi a Home</kbd></li>
+    </ul>
+    <p>Da quel momento la apri con un tocco, come tutte le app.</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">2</span> La schermata</h2>
+    <p>In alto a destra c'è il <b>pannello LIVELLI</b>: da lì accendi e spegni tutto. La mappa mostra la costa vista dal satellite: in acqua limpida si vede già il fondale (sabbia chiara, secche, macchie scure di roccia/alghe).</p>
+    <img src="guida-01-overview.png" alt="Schermata principale con il pannello dei livelli">
+    <p class="cap">Il pannello dei livelli, in alto a destra</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">3</span> Vedere la profondità del fondale</h2>
+    <p>Nel pannello attiva <b>«SDB satellitare 10 m»</b> (la scritta verde). Dopo qualche secondo la mappa si colora: <b>chiaro = basso, blu scuro = profondo</b>. Le <b>linee bianche</b> sono le isobate (−2, −5, −10, −15 m), come le curve di livello del fondale.</p>
+    <img src="guida-05-sdb.png" alt="Mappa colorata con la profondità del fondale e le isobate">
+    <p class="cap">Profondità del fondale (SDB) con le isobate bianche</p>
+    <div class="tip">💡 Con lo slider <b>Opacità</b> regoli quanto il colore copre il satellite. Con <b>Data</b> scegli una foto satellitare di un altro giorno (utile se una è nuvolosa o l'acqua era torbida).</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">4</span> Tocca il mare: profondità + tipo di fondo</h2>
+    <p>Tocca un punto qualsiasi sul mare: compare in basso la <b>profondità</b> stimata e, dove disponibile, il <b>tipo di fondale</b> (sabbia, roccia, Posidonia). Serve a capire dove tenere l'esca.</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">5</span> Il righello di lancio</h2>
+    <p>Attiva <b>«Righello lancio»</b>, poi <b>tocca la riva</b> e poi il <b>punto dove cade l'esca</b>: ti dice quanti metri hai lanciato. Un surfcasting tipico arriva a 80-150 m — così vedi se raggiungi la secca o la buca che ti interessa.</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">6</span> «Sei qui» — la tua posizione GPS</h2>
+    <p>Premi <b>«Sei qui (GPS)»</b>: l'app trova la tua posizione reale (puntino azzurro) e ti segue mentre ti muovi sulla battigia. Così sai <b>esattamente dove sei</b> rispetto a secche e buche. Premi di nuovo per spegnerlo.</p>
+    <img src="guida-04-gps.png" alt="Posizione GPS sulla mappa">
+    <p class="cap">Il puntino azzurro = dove sei tu</p>
+    <div class="tip">💡 La prima volta il telefono chiede il permesso di usare la posizione: rispondi <b>Consenti</b>.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">7</span> Segna un punto e registra una cattura</h2>
+    <p>Premi <b>«Segna punto / cattura»</b>, poi <b>tocca il punto</b> sulla mappa. Si apre una scheda: scrivi la <b>specie pescata</b> (o scegline una dall'elenco), il peso e una nota. <b>Data, ora, coordinate, profondità e tipo di fondo li mette da solo.</b> Premi <b>Salva</b>.</p>
+    <img src="guida-03-cattura.png" alt="Scheda per registrare una cattura">
+    <p class="cap">La scheda cattura: tu scrivi solo la specie, il resto è automatico</p>
+    <p>I tuoi punti restano salvati sul telefono (li rivedi con <b>«I miei punti/catture»</b>). Toccando un pin vedi i dettagli e puoi cancellarlo.</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">8</span> Salva la zona per usarla senza campo</h2>
+    <p>Prima di andare in spiaggia, inquadra la zona dove pescherai e premi <b>«Salva zona offline»</b>. L'app scarica le mappe di quell'area (e l'ultima profondità caricata). Così <b>funziona anche senza rete telefonica</b> sul posto.</p>
+    <div class="tip">💡 Fallo <b>a casa col wifi</b>: inquadra il tratto di costa, aspetta il messaggio «Zona salvata offline», e sei pronto.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">9</span> Imposta il tuo punto di partenza</h2>
+    <p>Sposta la mappa sul tuo spot preferito e premi <b>«Imposta partenza qui»</b>: da lì in poi l'app <b>si aprirà sempre lì</b>, senza doverla cercare ogni volta.</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">10</span> Substrato e Posidonia</h2>
+    <p>Attiva <b>«Substrato (sabbia/roccia)»</b> e <b>«Posidonia»</b> per vedere le mappe ufficiali del tipo di fondo. La <b>Posidonia</b> (prateria verde) è spesso zona di pesce, ma può impigliare l'esca: sapere dov'è aiuta a scegliere il punto giusto.</p>
+  </div>
+
+  <div class="lead">
+    <b>In due parole, per una battuta:</b>
+    <ul>
+      <li>A casa: inquadra lo spot → <b>Salva zona offline</b>.</li>
+      <li>In spiaggia: <b>Sei qui</b> per posizionarti, accendi <b>SDB</b> per leggere il fondale.</li>
+      <li>Studia dove sono le buche/secche (isobate) e mira con il <b>Righello lancio</b>.</li>
+      <li>Preso qualcosa? <b>Segna punto / cattura</b> → resta memorizzato per la prossima volta.</li>
+    </ul>
+  </div>
+
+  <div class="btnrow"><a class="cta" href="./">🎣 Apri PescaRiva</a></div>
+
+  <div class="foot">PescaRiva · fondale satellitare (stima Sentinel-2/Copernicus) · dati EMODnet · mappe Esri/OSM<br>Le profondità sono indicative: usa sempre buonsenso e attrezzatura adeguata in mare.</div>
+
+</div>
+</body>
+</html>
