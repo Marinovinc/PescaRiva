@@ -78,6 +78,8 @@
   #markForm .mfBtns button{flex:1;padding:10px;border-radius:7px;border:1px solid #2c416c;background:#11243c;color:#dfeaf5;font-weight:700;font-size:13px;cursor:pointer}
   #mfSave{background:#8dff3a!important;color:#0a2a06!important;border-color:#8dff3a!important}
   .prpin{font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
+  .canalpin{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(126,66,224,.92);border:2px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,.6)}
+  .canalpin.near{background:rgba(40,190,120,.95)}
   .leaflet-popup-content b{color:#16e0ff}
   .prDelBtn{margin-top:6px;padding:5px 9px;border-radius:6px;border:1px solid #ff5d7a;background:#2a1420;color:#ff9bb0;font-size:12px;cursor:pointer}
 </style>
@@ -523,7 +525,7 @@ $('lSdb').onchange=async()=>{ if($('lSdb').checked){
     try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()) return; }
     if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
   else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; }
-    if(!$('lIso').checked && !$('lCanal').checked){ sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } if(canalOverlay){ map.removeLayer(canalOverlay); canalOverlay=null; } $('sdbDateRow').style.display='none'; }
+    if(!$('lIso').checked && !$('lCanal').checked){ sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } if(canalOverlay){ map.removeLayer(canalOverlay); canalOverlay=null; } canalPins.clearLayers(); $('sdbDateRow').style.display='none'; }
     $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
 $('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[i]||sdbScenes[0]); } };
@@ -584,17 +586,20 @@ $('lIso').onchange=async()=>{
 $('lIsoFine').onchange=()=>{ if($('lIsoFine').checked && !$('lIso').checked){ $('lIso').checked=true; $('lIso').onchange(); return; } drawIsobaths(); };
 
 // ---- CANALONI: rilievo = profondità locale - tendenza regionale; colora a fasce truogoli(deeper)/barre(shallower) ----
-let canalOverlay=null;
+let canalOverlay=null; const canalPins=L.layerGroup().addTo(map);
+const canalIcon=L.divIcon({className:'',html:'<div class="canalpin">&#127744;</div>',iconSize:[26,26],iconAnchor:[13,13]});          // esterno (viola)
+const canalIconNear=L.divIcon({className:'',html:'<div class="canalpin near">&#127907;</div>',iconSize:[26,26],iconAnchor:[13,13]});  // sotto riva, a portata di lancio (verde)
 function drawCanaloni(){
-  if(canalOverlay){ map.removeLayer(canalOverlay); canalOverlay=null; }
+  if(canalOverlay){ map.removeLayer(canalOverlay); canalOverlay=null; } canalPins.clearLayers();
   if(!($('lCanal')&&$('lCanal').checked) || !sdbGrid){ updLegend(); return; }
   const g=sdbGrid,W=g.W,H=g.H,dp=g.depth,b=g.bnds;
   let d=smoothDepth(dp,W,H,3); d=smoothDepth(d,W,H,3);       // togli il rumore fine (fasce pulite)
   const rad=Math.max(12,Math.round(W/10));                  // scala regionale (rimuove barre/canali)
   let trend=smoothDepth(d,W,H,rad); trend=smoothDepth(trend,W,H,rad);
+  const res=new Float32Array(W*H).fill(NaN);
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const ctx=cv.getContext('2d'); const im=ctx.createImageData(W,H);
   for(let i=0;i<W*H;i++){ if(isNaN(dp[i])||isNaN(d[i])||isNaN(trend[i])){ im.data[i*4+3]=0; continue; }
-    const r=d[i]-trend[i]; let c=null,al=0;                 // r<0 = più profondo del contorno = canalone/truogolo
+    const r=d[i]-trend[i]; res[i]=r; let c=null,al=0;       // r<0 = più profondo del contorno = canalone/truogolo
     if(r<=-1.2){ c=[126,66,224]; al=170; }                  // canalone marcato (buca)
     else if(r<=-0.6){ c=[46,116,240]; al=150; }             // canalone
     else if(r<=-0.28){ c=[86,200,240]; al=120; }            // truogolo lieve
@@ -603,7 +608,25 @@ function drawCanaloni(){
     im.data[i*4]=c[0]; im.data[i*4+1]=c[1]; im.data[i*4+2]=c[2]; im.data[i*4+3]=al; }
   ctx.putImageData(im,0,0);
   canalOverlay=L.imageOverlay(cv.toDataURL(),b,{opacity:0.8,interactive:false}).addTo(map);
+  markCanalMouths(res,dp,W,H,b);
   updLegend();
+}
+// Marca i canaloni: nuclei = minimi locali del rilievo; distingue per PROFONDITA' i "sotto riva" (bassi, a portata di lancio) dagli "esterni" (profondi)
+function markCanalMouths(res,depth,W,H,b){
+  const N=b.getNorth(),S=b.getSouth(),Wd=b.getWest(),E=b.getEast();
+  const R=10, cand=[];
+  for(let py=2;py<H-2;py++)for(let px=2;px<W-2;px++){ const i=py*W+px, r=res[i];
+    if(isNaN(r)||r>-0.3) continue; let isMin=true;
+    for(let dy=-R;dy<=R&&isMin;dy++){ const yy=py+dy; if(yy<0||yy>=H)continue; const row=yy*W;
+      for(let dx=-R;dx<=R;dx++){ const xx=px+dx; if(xx<0||xx>=W)continue; const rj=res[row+xx]; if(!isNaN(rj)&&rj<r){ isMin=false; break; } } }
+    if(isMin && isFinite(depth[i])) cand.push({i,r,dep:depth[i]}); }
+  cand.sort((a,c)=>a.r-c.r);   // canali più marcati prima
+  const near=cand.filter(c=>c.dep<=-0.4 && c.dep>=-2.8).slice(0,8);   // sotto riva: bassi, a portata di lancio
+  const far =cand.filter(c=>c.dep<-2.8).slice(0,4);                   // esterni: profondi
+  near.forEach(c=>c.near=true); far.forEach(c=>c.near=false);
+  [...near,...far].forEach(cp=>{ const py=(cp.i/W)|0, px=cp.i-py*W, lat=N-(py/(H-1))*(N-S), lng=Wd+(px/(W-1))*(E-Wd);
+    L.marker([lat,lng],{icon: cp.near?canalIconNear:canalIcon}).addTo(canalPins)
+     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m'+(cp.near?' &middot; a portata di lancio':' &middot; verso il largo')+'</span>'); });
 }
 $('lCanal').onchange=async()=>{
   if(!$('lCanal').checked){ drawCanaloni(); return; }
@@ -623,7 +646,11 @@ map.on('moveend', ()=>{ if(!$('lSdb').checked && !$('lIso').checked && !$('lCana
   sdbMoveT=setTimeout(async ()=>{ if(sdbBusy||(!$('lSdb').checked && !$('lIso').checked && !$('lCanal').checked)) return;
     if(map.getZoom()<12) return;                                   // troppo largo: SDB non ha senso
     const v=map.getBounds();
-    if(sdbGrid && coverFrac(v,sdbGrid.bnds)>0.7) return;           // area ancora coperta: niente ricarico
+    if(sdbGrid){ const gb=sdbGrid.bnds;
+      const gA=(gb.getEast()-gb.getWest())*(gb.getNorth()-gb.getSouth());
+      const vA=(v.getEast()-v.getWest())*(v.getNorth()-v.getSouth());
+      if(coverFrac(v,gb)>0.7 && vA/gA>0.45) return;                // coperto E risoluzione adeguata: niente ricarico
+    }                                                              // altrimenti (spostato o zoomato dentro) ricalcola a piena risoluzione
     sdbScenes=[]; try{ await ensureScenes(v); }catch(e){ return; } // nuove scene per l'area visibile
     if(sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[Math.min(i,sdbScenes.length-1)]||sdbScenes[0]); }
   }, 900); });
