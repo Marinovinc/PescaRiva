@@ -746,6 +746,7 @@ $('btnGps').onclick=()=>{
   {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
 };
 </script>
-<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(reg){reg.update&&reg.update();}).catch(function(){});
+  var refreshing=false; navigator.serviceWorker.addEventListener('controllerchange',function(){ if(refreshing)return; refreshing=true; location.reload(); });});}</script>
 </body>
 </html>
