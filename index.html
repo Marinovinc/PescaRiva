@@ -494,14 +494,15 @@ async function loadSDB(feature){
     for(let py=0;py<H;py++)for(let px=0;px<W;px++){ const i=py*W+px, z=depth[i]; if(isNaN(z)){ im.data[i*4+3]=0; continue; }
       let c=sdbColor(z); if(isoLine(z,py,px)) c=[255,255,255];
       im.data[i*4]=c[0]; im.data[i*4+1]=c[1]; im.data[i*4+2]=c[2]; im.data[i*4+3]=210; }
-    ctx.putImageData(im,0,0);
-    if(sdbOverlay) map.removeLayer(sdbOverlay);
-    sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ovSdb').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
+    ctx.putImageData(im,0,0); const durl=cv.toDataURL();
+    if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; }
+    if($('lSdb').checked) sdbOverlay=L.imageOverlay(durl,bnds,{opacity:$('ovSdb').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);   // colore solo se richiesto
     sdbGrid={depth,W,H,bnds,calib,calibSrc,nManual};
-    drawIsobaths();   // ridisegna le linee batimetriche se attive
-    try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:cv.toDataURL(),n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
-    $('info').innerHTML='<b>SDB '+(calib?'calibrata (m)':'relativa')+'</b> '+date+' &middot; nuvole '+cc+'% &middot; '+
-      '<span class="sub">'+(calib?('isobate -2/-5/-10/-15 m &middot; base: '+calibSrc+' &middot; tocca per la profondità'):'chiaro=basso, scuro=profondo (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
+    drawIsobaths();   // linee batimetriche (anche senza il colore)
+    try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:durl,n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
+    const onlyIso=!$('lSdb').checked;
+    $('info').innerHTML='<b>'+(onlyIso?'Linee batimetriche':('SDB '+(calib?'calibrata (m)':'relativa')))+'</b> '+date+(onlyIso?'':' &middot; nuvole '+cc+'%')+' &middot; '+
+      '<span class="sub">'+(calib?((onlyIso?'curve di profondità in metri':'isobate -2/-5/-10/-15 m')+' &middot; tocca per la profondità'):'profondità relativa (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
   }catch(e){ if(restoreOfflineSDB()){ sdbBusy=false; return; } $('info').innerHTML='SDB non riuscita: '+e.message; if($('lSdb')) $('lSdb').checked=false; }
   sdbBusy=false;
 }
@@ -512,10 +513,14 @@ function restoreOfflineSDB(){ try{ const s=JSON.parse(localStorage.getItem('pr_s
   if($('lSdb')) $('lSdb').checked=true;
   $('info').style.display='block'; $('info').innerHTML='<b>SDB da cache offline</b> '+(s.date||'')+' &middot; <span class="sub">'+(s.calib?'isobate -2/-5/-10/-15 m':'profondità relativa')+' &middot; stima Sentinel-2 (senza rete)</span>';
   return true; }catch(e){ return false; } }
-$('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='block'; $('info').innerHTML='SDB: cerco le scene Sentinel-2&hellip;';
+$('lSdb').onchange=async()=>{ if($('lSdb').checked){
+    if(sdbGrid && restoreOfflineSDB()) return;   // griglia già calcolata (es. dalle linee): mostra il colore all'istante
+    $('info').style.display='block'; $('info').innerHTML='SDB: cerco le scene Sentinel-2&hellip;';
     try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()) return; }
     if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
-  else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
+  else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; }
+    if(!$('lIso').checked){ sdbGrid=null; sdbScenes=[]; if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; } $('sdbDateRow').style.display='none'; }
+    $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
 $('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=+($('sdbDate').value||0); loadSDB(sdbScenes[i]||sdbScenes[0]); } };
 
@@ -540,23 +545,33 @@ function drawIsobaths(){
       const E={T:[x+(L-a)/(bb-a),y],R:[x+1,y+(L-bb)/(c-bb)],B:[x+(L-d)/(c-d),y+1],L:[x,y+(L-a)/(d-a)]};
       for(const pq of (tab[idx]||[])) segs.push([E[pq[0]],E[pq[1]]]); }
     if(!segs.length) continue;
-    ctx.strokeStyle=isoColor(L); ctx.lineWidth=1.6; ctx.beginPath();
-    for(const s of segs){ ctx.moveTo(gx(s[0][0]),gy(s[0][1])); ctx.lineTo(gx(s[1][0]),gy(s[1][1])); } ctx.stroke();
+    ctx.beginPath();
+    for(const s of segs){ ctx.moveTo(gx(s[0][0]),gy(s[0][1])); ctx.lineTo(gx(s[1][0]),gy(s[1][1])); }
+    ctx.lineWidth=3.8; ctx.strokeStyle='rgba(3,8,16,.8)'; ctx.stroke();   // alone scuro per leggibilità sul satellite
+    ctx.lineWidth=1.8; ctx.strokeStyle=isoColor(L); ctx.stroke();          // linea colorata
     const step=Math.max(35,(segs.length/4)|0);
     for(let k=0;k<segs.length;k+=step){ const s=segs[k],mx=gx((s[0][0]+s[1][0])/2),my=gy((s[0][1]+s[1][1])/2);
       ctx.lineWidth=3; ctx.strokeStyle='rgba(4,10,20,.9)'; ctx.strokeText(Math.abs(L)+'m',mx,my);
       ctx.fillStyle=isoColor(L); ctx.fillText(Math.abs(L)+'m',mx,my); } }
   isoOverlay=L.imageOverlay(cv.toDataURL(),b,{opacity:0.95,interactive:false}).addTo(map);
 }
-$('lIso').onchange=()=>{ if($('lIso').checked && !sdbGrid){ $('info').style.display='block'; $('info').innerHTML='Attiva prima la <b>Profondità satellite (SDB)</b>: le linee si calcolano da lì'; setTimeout(()=>$('info').style.display='none',3800); $('lIso').checked=false; return; } drawIsobaths(); };
+$('lIso').onchange=async()=>{
+  if(!$('lIso').checked){ drawIsobaths(); return; }   // spegne le linee
+  if(sdbGrid){ drawIsobaths(); return; }              // griglia già pronta
+  // calcola la griglia SDB per disegnare SOLO le linee (senza il colore)
+  $('info').style.display='block'; $('info').innerHTML='Calcolo le linee batimetriche&hellip;';
+  try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()){ return; } }
+  if(sdbScenes.length) loadSDB(sdbScenes[+($('sdbDate').value||0)]||sdbScenes[0]);
+  else { $('info').innerHTML='Nessuna scena satellitare qui per le linee'; $('lIso').checked=false; }
+};
 
 // La SDB (Prof.) segue la parte visibile: allo spostamento/zoom si ricalcola per la nuova area
 let sdbMoveT=null;
 function coverFrac(v,g){ const iw=Math.max(0,Math.min(v.getEast(),g.getEast())-Math.max(v.getWest(),g.getWest())),
   ih=Math.max(0,Math.min(v.getNorth(),g.getNorth())-Math.max(v.getSouth(),g.getSouth())),
   va=(v.getEast()-v.getWest())*(v.getNorth()-v.getSouth()); return va>0?(iw*ih)/va:0; }
-map.on('moveend', ()=>{ if(!$('lSdb').checked) return; clearTimeout(sdbMoveT);
-  sdbMoveT=setTimeout(async ()=>{ if(sdbBusy||!$('lSdb').checked) return;
+map.on('moveend', ()=>{ if(!$('lSdb').checked && !$('lIso').checked) return; clearTimeout(sdbMoveT);
+  sdbMoveT=setTimeout(async ()=>{ if(sdbBusy||(!$('lSdb').checked && !$('lIso').checked)) return;
     if(map.getZoom()<12) return;                                   // troppo largo: SDB non ha senso
     const v=map.getBounds();
     if(sdbGrid && coverFrac(v,sdbGrid.bnds)>0.7) return;           // area ancora coperta: niente ricarico
