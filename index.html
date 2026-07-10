@@ -528,10 +528,19 @@ $('lSdbComp').onchange=()=>{ if($('lSdb').checked && sdbScenes.length){ const i=
 let isoOverlay=null;
 const ISO_LV=[-1,-2,-3,-4,-5,-7,-10,-15,-20];
 function isoColor(L){ const t=Math.min(1,(-L)/20), r=Math.round(180-140*t), g=Math.round(245-140*t); return 'rgb('+r+','+g+',255)'; }
+// Liscia la griglia (box blur separabile, ignora NaN) -> curve continue invece di quadratini
+function smoothDepth(src,W,H,rad){
+  const tmp=new Float32Array(W*H), out=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){ if(isNaN(src[y*W+x])){tmp[y*W+x]=NaN;continue;} let s=0,n=0;
+    for(let d=-rad;d<=rad;d++){const xx=x+d; if(xx<0||xx>=W)continue; const v=src[y*W+xx]; if(!isNaN(v)){s+=v;n++;}} tmp[y*W+x]=n?s/n:NaN; }
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){ if(isNaN(tmp[y*W+x])){out[y*W+x]=NaN;continue;} let s=0,n=0;
+    for(let d=-rad;d<=rad;d++){const yy=y+d; if(yy<0||yy>=H)continue; const v=tmp[yy*W+x]; if(!isNaN(v)){s+=v;n++;}} out[y*W+x]=n?s/n:NaN; }
+  return out; }
 function drawIsobaths(){
   if(isoOverlay){ map.removeLayer(isoOverlay); isoOverlay=null; }
   if(!($('lIso')&&$('lIso').checked) || !sdbGrid) return;
-  const g=sdbGrid,W=g.W,H=g.H,depth=g.depth,b=g.bnds;
+  const g=sdbGrid,W=g.W,H=g.H,b=g.bnds;
+  let depth=smoothDepth(g.depth,W,H,2); depth=smoothDepth(depth,W,H,2);   // 2 passaggi -> linee lisce
   const CW=900,CH=Math.round(CW*H/W),cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;
   const ctx=cv.getContext('2d'); ctx.font='bold 15px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
   const gx=x=>x/(W-1)*CW, gy=y=>y/(H-1)*CH;
