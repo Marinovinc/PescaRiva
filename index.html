@@ -48,6 +48,18 @@
   #preyRow .pchip{background:#0c2033;border:1px solid #23415f;border-radius:20px;padding:3px 9px;font-size:11.5px;color:#dfeaf5;white-space:nowrap}
   #preyRow .pchip.warn{border-color:#ffb020;color:#ffd68a}
   #preyRow .plab{font-size:11px;color:#8fb0cc;align-self:center;margin-right:2px}
+  #preyPanel{position:fixed;z-index:1200;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,420px);max-height:82vh;overflow:auto;
+    background:rgba(10,22,38,.98);border:1px solid #1f3650;border-radius:12px;padding:12px 14px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+  #preyPanel .mfHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+  #preyPanel .mfHd b{color:#16e0ff;font-size:13px}
+  #preyClose{background:none;border:none;color:#cfe0f2;font-size:16px;cursor:pointer}
+  .pzone{border-top:1px solid #1f3650;margin-top:8px;padding-top:7px}
+  .pzt{font-size:12px;font-weight:700;color:#8dff3a;margin-bottom:5px}
+  .pzone .pchips{display:flex;flex-wrap:wrap;gap:5px}
+  .psub{font-size:11px;color:#8fb0cc;margin:2px 0 4px}
+  #preyPanel .pchip{background:#0c2033;border:1px solid #23415f;border-radius:20px;padding:3px 9px;font-size:12px;color:#dfeaf5}
+  #preyPanel .pchip.warn{border-color:#ffb020;color:#ffd68a}
+  #preyPanel .pchip.off{opacity:.42}
   #btnMark.active{background:#1e3a63;border-color:#8dff3a}
   #btnGps.active{background:#1e3a63;border-color:#16e0ff;color:#fff}
   #btnCalib.active{background:#2a4d18;border-color:#8dff3a;color:#fff}
@@ -91,6 +103,7 @@
     <label><input type="checkbox" id="lRuler"> &#128207; Righello lancio</label>
     <label><input type="checkbox" id="lMarks" checked> &#128205; I miei punti/catture</label>
     <button id="btnMark" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#8dff3a;font-weight:700;font-size:12px;cursor:pointer">&#10133; Segna punto / cattura</button>
+    <button id="btnPrey" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:700;font-size:12px;cursor:pointer">&#127907; Prede probabili</button>
   </div>
   <div class="grp">
     <button id="btnGps" style="width:100%;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:700;font-size:12px;cursor:pointer">&#128205; Sei qui (GPS)</button>
@@ -103,6 +116,7 @@
 
 <div id="legend"></div>
 <div id="profile"><div class="phd"><span id="profTxt"></span><button id="profClose" title="Chiudi">&#10005;</button></div><canvas id="profCv" width="900" height="192"></canvas><div id="preyRow"></div></div>
+<div id="preyPanel"><div class="mfHd"><b>&#127907; Prede probabili &mdash; litorale di Sabaudia</b><button id="preyClose">&#10005;</button></div><div id="preyBody"></div></div>
 <div id="info"></div>
 <div id="markForm">
   <div class="mfHd"><b>&#128205; Punto / cattura</b><button id="mfClose" title="Chiudi">&#10005;</button></div>
@@ -218,19 +232,28 @@ function sdbDepthAt(lat,lng){ if(!sdbGrid) return null; const g=sdbGrid,b=g.bnds
 // sub: substrati preferiti (sabbia/misto/roccia/posidonia/fango) o 'any'. mesi: mesi di presenza/attivita' (1-12).
 const A=[1,2,3,4,5,6,7,8,9,10,11,12];
 const PREY=[
-  {n:'Mormora',e:'🐟',dmin:0,dmax:160,sub:['sabbia','misto'],mesi:A,note:'sabbia e risacca, tutto l\'anno'},
+  {n:'Mormora',e:'🐟',dmin:0,dmax:160,sub:['sabbia','misto'],mesi:A,note:'sabbia e risacca, tutto l\'anno — arenicola/coreano'},
   {n:'Spigola',e:'🐟',dmin:0,dmax:90,sub:['any'],mesi:[1,2,3,4,10,11,12],note:'risacca, foci, mareggiata — autunno/inverno'},
+  {n:'Orata',e:'🐟',dmin:30,dmax:170,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10,11],note:'sabbia, cerca molluschi — tarda primavera/autunno'},
+  {n:'Cefalo/Muggine',e:'🐟',dmin:0,dmax:80,sub:['any'],mesi:A,note:'sottoriva, foci e canali — pane/bigattino'},
+  {n:'Sogliola',e:'🐟',dmin:10,dmax:150,sub:['sabbia','fango'],mesi:[10,11,12,1,2,3,4],note:'piatto di sabbia, spesso di notte'},
+  {n:'Rombo',e:'🐟',dmin:40,dmax:250,sub:['sabbia','misto'],mesi:[3,4,5,6,9,10,11],note:'piatto predatore in agguato nella sabbia'},
+  {n:'Seppia',e:'🦑',dmin:0,dmax:120,sub:['sabbia','posidonia','misto'],mesi:[2,3,4,5,6,9,10],note:'primavera sotto costa — seppiara/totanara'},
+  {n:'Calamaro',e:'🦑',dmin:0,dmax:150,sub:['any'],mesi:[9,10,11,12,1,2],note:'autunno-inverno, di notte — totanara'},
+  {n:'Polpo',e:'🐙',dmin:0,dmax:120,sub:['roccia','misto','posidonia'],mesi:A,note:'roccia/misto — polpara, meglio in autunno'},
+  {n:'Aguglia',e:'🐟',dmin:0,dmax:120,sub:['any'],mesi:[4,5,6,7,8,9],note:'in superficie, a galleggiante — primavera/estate'},
   {n:'Leccia',e:'🐟',dmin:0,dmax:110,sub:['any'],mesi:[6,7,8,9],note:'predatore, estate sotto costa'},
   {n:'Latterini/minutaglia',e:'🐟',dmin:0,dmax:30,sub:['any'],mesi:A,note:'battigia, esche vive'},
   {n:'Tracina',e:'⚠️',dmin:15,dmax:130,sub:['sabbia'],mesi:[5,6,7,8,9,10],note:'infossata nella sabbia — velenosa, attenzione'},
-  {n:'Orata',e:'🐟',dmin:30,dmax:170,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10,11],note:'sabbia, cerca molluschi — tarda primavera/autunno'},
   {n:'Occhiata',e:'🐟',dmin:30,dmax:160,sub:['roccia','misto','posidonia'],mesi:A,note:'colonna d\'acqua, misto/roccia'},
   {n:'Salpa',e:'🐟',dmin:20,dmax:120,sub:['posidonia','roccia'],mesi:[4,5,6,7,8,9,10],note:'erbivora, presso alga/Posidonia'},
   {n:'Sarago',e:'🐟',dmin:40,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia/misto, scogliere — grossi in autunno/inverno'},
+  {n:'Anguilla',e:'🐟',dmin:0,dmax:60,sub:['sabbia','fango'],mesi:[3,4,9,10,11],note:'foci e canali di Sabaudia, di notte'},
   {n:'Ombrina',e:'🐟',dmin:80,dmax:260,sub:['sabbia','misto'],mesi:[5,6,7,8,9,10],note:'buche oltre la barra, spesso di notte'},
   {n:'Gronco',e:'🐟',dmin:60,dmax:220,sub:['roccia','misto'],mesi:A,note:'roccia, di notte'},
   {n:'Razza',e:'🐟',dmin:110,dmax:300,sub:['sabbia','fango'],mesi:[1,2,3,10,11,12],note:'sabbia profonda, di notte — mesi freddi'}
 ];
+function preyChip(p,off){ return '<span class="pchip'+(p.e==='⚠️'?' warn':'')+(off?' off':'')+'" title="'+p.note.replace(/"/g,'')+(off?' — fuori stagione ora':'')+'">'+p.e+' '+p.n+'</span>'; }
 function seasonName(m){ return (m>=3&&m<=5)?'primavera':(m>=6&&m<=8)?'estate':(m>=9&&m<=11)?'autunno':'inverno'; }
 // Mappa una classe di habitat EUNIS/EMODnet in una categoria di substrato
 function habCat(s){ if(!s) return null; s=(''+s).toLowerCase();
@@ -257,8 +280,19 @@ function renderPrey(distM, subCat){ const row=$('preyRow'); if(distM==null||!isF
   list.sort((a,b)=>{ const as=subCat&&a.sub.includes(subCat)&&!a.sub.includes('any')?0:1, bs=subCat&&b.sub.includes(subCat)&&!b.sub.includes('any')?0:1; return as-bs; });
   const hdr='Prede probabili a '+fmtM(distM)+' &middot; '+seasonName(mo)+(subCat?(' &middot; fondo '+(SUBLAB[subCat]||subCat)):' &middot; fondo n/d');
   row.innerHTML='<span class="plab">'+hdr+':</span>'+
-    (list.length?list.map(p=>'<span class="pchip'+(p.e==='⚠️'?' warn':'')+'" title="'+p.note.replace(/"/g,'')+'">'+p.e+' '+p.n+'</span>').join('')
-      :'<span class="plab">poche specie di stagione a questa distanza</span>'); }
+    (list.length?list.map(preyChip).join(''):'<span class="plab">poche specie di stagione a questa distanza</span>'); }
+// Scheda "Prede probabili" sempre accessibile, per fasce di distanza e filtrata per stagione
+const PZONES=[{t:'Sottoriva — 0-50 m',d:25},{t:'Media distanza — 50-120 m',d:85},{t:'Lontano — oltre 120 m',d:180}];
+function renderPreyPanel(){ const mo=new Date().getMonth()+1;
+  let h='<div class="psub">Stagione attuale: <b>'+seasonName(mo)+'</b> &middot; tutte le specie del litorale; quelle <span style="opacity:.5">in grigio</span> sono <b>fuori stagione ora</b>.</div>';
+  for(const z of PZONES){ const list=PREY.filter(p=>z.d>=p.dmin&&z.d<=p.dmax)
+      .sort((a,b)=>(b.mesi.includes(mo)?1:0)-(a.mesi.includes(mo)?1:0));
+    h+='<div class="pzone"><div class="pzt">'+z.t+'</div><div class="pchips">'+
+       (list.length?list.map(p=>preyChip(p,!p.mesi.includes(mo))).join(''):'<span class="psub">&mdash;</span>')+'</div></div>'; }
+  h+='<div class="psub" style="margin-top:8px">⚠️ tracina velenosa &middot; 🦑 seppia/calamaro e 🐙 polpo (cefalopodi) &middot; col <b>Righello lancio</b> le prede si affinano anche col <b>fondo</b> del punto d\'arrivo. Indicazione di massima: la presenza reale varia con orario, mareggiata e stagione.</div>';
+  $('preyBody').innerHTML=h; }
+$('btnPrey').onclick=()=>{ renderPreyPanel(); $('preyPanel').style.display='block'; };
+$('preyClose').onclick=()=>{ $('preyPanel').style.display='none'; };
 // Profilo del fondale lungo la linea di lancio
 function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');
   let total=0; const segD=[0]; for(let i=1;i<pts.length;i++){ total+=map.distance(pts[i-1],pts[i]); segD.push(total); }
