@@ -78,6 +78,7 @@
   <div class="grp">
     <button id="btnGps" style="width:100%;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#16e0ff;font-weight:700;font-size:12px;cursor:pointer">&#128205; Sei qui (GPS)</button>
     <button id="btnHome" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #1f3650;background:#11243c;color:#dfeaf5;font-weight:600;font-size:11.5px;cursor:pointer">&#127968; Imposta partenza qui</button>
+    <button id="btnOffline" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #ffd54a;background:#11243c;color:#ffd54a;font-weight:700;font-size:11.5px;cursor:pointer">&#11015; Salva zona offline</button>
   </div>
   <div class="hint">Tocca il mare per profondità e fondale.<br>Righello ON: tocca riva &rarr; meta.</div>
 </div>
@@ -293,13 +294,22 @@ async function loadSDB(feature){
     if(sdbOverlay) map.removeLayer(sdbOverlay);
     sdbOverlay=L.imageOverlay(cv.toDataURL(),bnds,{opacity:$('ov').value/100,attribution:'SDB &copy; Sentinel-2/Copernicus (AWS Open Data) &middot; stima'}).addTo(map);
     sdbGrid={depth,W,H,bnds,calib};
+    try{ localStorage.setItem('pr_sdb_offline',JSON.stringify({url:cv.toDataURL(),n:bnds.getNorth(),s:bnds.getSouth(),e:bnds.getEast(),w:bnds.getWest(),date:date,calib:!!calib})); }catch(_){}  // SDB disponibile offline
     $('info').innerHTML='<b>SDB '+(calib?'calibrata (m)':'relativa')+'</b> '+date+' &middot; nuvole '+cc+'% &middot; '+
       '<span class="sub">'+(calib?'isobate bianche -2/-5/-10/-15 m &middot; tocca per la profondità':'chiaro=basso, scuro=profondo (calibrazione non riuscita)')+' &middot; stima Sentinel-2</span>';
-  }catch(e){ $('info').innerHTML='SDB non riuscita: '+e.message; if($('lSdb')) $('lSdb').checked=false; }
+  }catch(e){ if(restoreOfflineSDB()){ sdbBusy=false; return; } $('info').innerHTML='SDB non riuscita: '+e.message; if($('lSdb')) $('lSdb').checked=false; }
   sdbBusy=false;
 }
+// Ripristina l'ultima SDB salvata (senza campo, in spiaggia): mostra l'immagine + isobate già calcolate
+function restoreOfflineSDB(){ try{ const s=JSON.parse(localStorage.getItem('pr_sdb_offline')||'null'); if(!s||!s.url) return false;
+  if(sdbOverlay) map.removeLayer(sdbOverlay);
+  sdbOverlay=L.imageOverlay(s.url,[[s.s,s.w],[s.n,s.e]],{opacity:$('ov').value/100,attribution:'SDB offline (stima Sentinel-2)'}).addTo(map);
+  if($('lSdb')) $('lSdb').checked=true;
+  $('info').style.display='block'; $('info').innerHTML='<b>SDB da cache offline</b> '+(s.date||'')+' &middot; <span class="sub">'+(s.calib?'isobate -2/-5/-10/-15 m':'profondità relativa')+' &middot; stima Sentinel-2 (senza rete)</span>';
+  return true; }catch(e){ return false; } }
 $('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='block'; $('info').innerHTML='SDB: cerco le scene Sentinel-2&hellip;';
-    await ensureScenes(map.getBounds()); if(sdbScenes.length) loadSDB(sdbScenes[0]); else { $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
+    try{ await ensureScenes(map.getBounds()); }catch(e){ if(restoreOfflineSDB()) return; }
+    if(sdbScenes.length) loadSDB(sdbScenes[0]); else if(!restoreOfflineSDB()){ $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
   else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
 </script>
@@ -353,6 +363,23 @@ $('lMarks').onchange=renderMarks;
 renderMarks();
 
 // ---- "Imposta partenza qui": salva la vista corrente come apertura dell'app ----
+// ---- Salva zona offline: precarica le tessere satellitari dell'area (per pescare senza campo) ----
+$('btnOffline').onclick=async()=>{ if(!('caches' in window)){ $('info').style.display='block'; $('info').innerHTML='Cache offline non supportata da questo browser'; return; }
+  const b=map.getBounds(), z=map.getZoom(), rad=v=>v*Math.PI/180;
+  const cache=await caches.open('pescariva-tiles'), urls=[];
+  for(let Z=Math.max(12,z-1); Z<=Math.min(18,z+2); Z++){ const n=Math.pow(2,Z);
+    const x0=Math.floor((b.getWest()+180)/360*n), x1=Math.floor((b.getEast()+180)/360*n);
+    const y0=Math.floor((1-Math.log(Math.tan(rad(b.getNorth()))+1/Math.cos(rad(b.getNorth())))/Math.PI)/2*n);
+    const y1=Math.floor((1-Math.log(Math.tan(rad(b.getSouth()))+1/Math.cos(rad(b.getSouth())))/Math.PI)/2*n);
+    for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++) urls.push('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+Z+'/'+y+'/'+x); }
+  const list=urls.slice(0,600); let done=0; $('info').style.display='block'; $('btnOffline').disabled=true;
+  for(const url of list){ try{ const r=await fetch(url,{mode:'no-cors'}); await cache.put(url,r); }catch(e){} done++;
+    if(done%15===0||done===list.length) $('info').innerHTML='&#11015; Salvo la zona offline&hellip; '+done+'/'+list.length+' tessere'; }
+  $('btnOffline').disabled=false;
+  const hasSdb=!!localStorage.getItem('pr_sdb_offline');
+  try{ localStorage.setItem('pr_offline_zone',JSON.stringify({n:b.getNorth(),s:b.getSouth(),e:b.getEast(),w:b.getWest(),z,tiles:list.length})); }catch(_){}
+  $('info').innerHTML='&#9989; <b>Zona salvata offline</b>: '+list.length+' tessere'+(hasSdb?' + SDB':'')+'. Qui la mappa funziona anche senza campo.'; setTimeout(()=>$('info').style.display='none',6000); };
+
 $('btnHome').onclick=()=>{ const c=map.getCenter(); localStorage.setItem('pr_home',JSON.stringify({lat:c.lat,lng:c.lng,z:map.getZoom()}));
   $('info').style.display='block'; $('info').innerHTML='&#127968; Vista salvata come partenza (si apre qui la prossima volta)'; setTimeout(()=>$('info').style.display='none',2800); };
 
