@@ -35,6 +35,21 @@
   .hint{color:#8fb0cc;font-size:11px;margin-top:4px}
   .leaflet-popup-content-wrapper{background:#0e2034;color:#dfeaf5;border:1px solid #1f3650}
   .leaflet-popup-tip{background:#0e2034;border:1px solid #1f3650}
+  #btnMark.active{background:#1e3a63;border-color:#8dff3a}
+  #markForm{position:fixed;z-index:1200;left:50%;bottom:10px;transform:translateX(-50%);width:min(94vw,360px);
+    background:rgba(10,22,38,.98);border:1px solid #1f3650;border-radius:12px;padding:12px 14px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+  #markForm .mfHd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  #markForm .mfHd b{color:#16e0ff}
+  #mfClose{background:none;border:none;color:#cfe0f2;font-size:16px;cursor:pointer}
+  #mfAuto{background:#0c1c2e;border:1px solid #1f3650;border-radius:8px;padding:7px 9px;font-size:11.5px;color:#8fb0cc;margin-bottom:8px;line-height:1.5}
+  #mfAuto b{color:#16e0ff}
+  #markForm input{width:100%;padding:9px;margin-bottom:8px;border-radius:7px;border:1px solid #2c416c;background:#0e1b30;color:#fff;font-size:14px}
+  #markForm .mfBtns{display:flex;gap:8px}
+  #markForm .mfBtns button{flex:1;padding:10px;border-radius:7px;border:1px solid #2c416c;background:#11243c;color:#dfeaf5;font-weight:700;font-size:13px;cursor:pointer}
+  #mfSave{background:#8dff3a!important;color:#0a2a06!important;border-color:#8dff3a!important}
+  .prpin{font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
+  .leaflet-popup-content b{color:#16e0ff}
+  .prDelBtn{margin-top:6px;padding:5px 9px;border-radius:6px;border:1px solid #ff5d7a;background:#2a1420;color:#ff9bb0;font-size:12px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -56,12 +71,28 @@
   </div>
   <div class="grp">
     <label><input type="checkbox" id="lRuler"> &#128207; Righello lancio</label>
+    <label><input type="checkbox" id="lMarks" checked> &#128205; I miei punti/catture</label>
+    <button id="btnMark" style="width:100%;margin-top:5px;padding:6px;border-radius:7px;border:1px solid #16e0ff;background:#11243c;color:#8dff3a;font-weight:700;font-size:12px;cursor:pointer">&#10133; Segna punto / cattura</button>
   </div>
   <div class="hint">Tocca il mare per profondità e fondale.<br>Righello ON: tocca riva &rarr; meta.</div>
 </div>
 
 <div id="legend"></div>
 <div id="info"></div>
+<div id="markForm">
+  <div class="mfHd"><b>&#128205; Punto / cattura</b><button id="mfClose" title="Chiudi">&#10005;</button></div>
+  <div id="mfAuto"></div>
+  <input id="mfSpecie" list="specieList" placeholder="Specie pescata (opz.)" autocomplete="off">
+  <datalist id="specieList">
+    <option>Spigola (branzino)</option><option>Orata</option><option>Mormora</option><option>Sarago</option>
+    <option>Occhiata</option><option>Leccia</option><option>Ombrina</option><option>Grongo</option>
+    <option>Anguilla</option><option>Cefalo (muggine)</option><option>Sugarello</option><option>Aguglia</option>
+    <option>Tracina</option><option>Sogliola</option><option>Razza</option><option>Boga</option><option>Salpa</option>
+  </datalist>
+  <input id="mfPeso" placeholder="Peso / taglia (opz.)" autocomplete="off">
+  <input id="mfNote" placeholder="Note: esca, mareggiata, orario&hellip; (opz.)" autocomplete="off">
+  <div class="mfBtns"><button id="mfCancel">Annulla</button><button id="mfSave">Salva</button></div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
@@ -69,7 +100,7 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const map=L.map('map',{center:[41.270,13.020],zoom:14,zoomControl:true,attributionControl:true});   // Litorale di Sabaudia (Circeo)
+const map=L.map('map',{center:[41.2668,13.0265],zoom:16,zoomControl:true,attributionControl:true});   // Litorale di Sabaudia (Circeo) - spot ville/pineta
 map.attributionControl.setPrefix('PescaRiva');
 
 // ---- BASI ----
@@ -151,6 +182,7 @@ $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
 let infoT=null;
 map.on('click', async e=>{
   const {lat,lng}=e.latlng;
+  if(marking){ openMarkForm(e.latlng); return; }   // modo "segna punto/cattura"
   if($('lRuler').checked){ rulerPts.push([lat,lng]); drawRuler(); return; }
   // Profondità dalla SDB satellitare (10 m) se disponibile e nel riquadro
   if(sdbGrid){ const g=sdbGrid,b=g.bnds;
@@ -264,6 +296,55 @@ $('lSdb').onchange=async()=>{ if($('lSdb').checked){ $('info').style.display='bl
     await ensureScenes(map.getBounds()); if(sdbScenes.length) loadSDB(sdbScenes[0]); else { $('info').innerHTML='SDB: nessuna scena disponibile qui'; $('lSdb').checked=false; } }
   else { if(sdbOverlay){ map.removeLayer(sdbOverlay); sdbOverlay=null; } sdbGrid=null; sdbScenes=[]; $('sdbDateRow').style.display='none'; $('info').style.display='none'; } };
 $('sdbDate').onchange=()=>{ const i=+$('sdbDate').value; if(sdbScenes[i]) loadSDB(sdbScenes[i]); };
+</script>
+<script>
+// ================= PUNTI / CATTURE (marker con coordinate + specie, info del momento in automatico) =================
+let marks=[]; try{ marks=JSON.parse(localStorage.getItem('pr_marks')||'[]'); }catch(e){ marks=[]; }
+let marking=false, pendingAuto=null;
+const markLayer=L.layerGroup().addTo(map);
+function markIcon(cat){ return L.divIcon({className:'',html:'<div class="prpin">'+(cat?'&#128031;':'&#128205;')+'</div>',iconSize:[22,22],iconAnchor:[11,20],popupAnchor:[0,-18]}); }
+function fmtDepth(d){ return d==null?'—':(d>=0?('terra +'+Math.round(d)+' m'):(Math.abs(Math.round(d))+' m')); }
+function popupHtml(m,idx){
+  const when=m.time?new Date(m.time).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  let h='';
+  if(m.specie) h+='<b>'+m.specie+'</b>'+(m.peso?(' &middot; '+m.peso):'')+'<br>'; else h+='<b>Punto</b><br>';
+  if(m.note) h+='<i>'+m.note+'</i><br>';
+  h+='<span style="color:#8fb0cc;font-size:11px">'+when+'<br>'+m.lat.toFixed(5)+', '+m.lng.toFixed(5)+
+     '<br>prof: '+fmtDepth(m.depth)+(m.fondale?(' &middot; fondale: '+m.fondale):'')+'</span>'+
+     '<br><button class="prDelBtn" onclick="prDelMark('+idx+')">Elimina</button>';
+  return h;
+}
+function renderMarks(){ markLayer.clearLayers(); if(!$('lMarks').checked) return;
+  marks.forEach((m,idx)=>{ L.marker([m.lat,m.lng],{icon:markIcon(!!m.specie)}).addTo(markLayer).bindPopup(popupHtml(m,idx)); });
+}
+window.prDelMark=function(idx){ marks.splice(idx,1); localStorage.setItem('pr_marks',JSON.stringify(marks)); map.closePopup(); renderMarks(); };
+async function openMarkForm(ll){
+  const now=new Date();
+  pendingAuto={time:now.toISOString(), lat:ll.lat, lng:ll.lng, depth:null, fondale:null};
+  $('mfSpecie').value=''; $('mfPeso').value=''; $('mfNote').value='';
+  $('mfAuto').innerHTML='<b>In automatico:</b> '+now.toLocaleString('it-IT')+'<br>'+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5)+'<br>profondità e fondale&hellip;';
+  $('markForm').style.display='block';
+  // profondità: prima dalla SDB (se caricata e nel riquadro), poi EMODnet
+  let dep=null;
+  if(sdbGrid){ const g=sdbGrid,b=g.bnds; if(ll.lat<=b.getNorth()&&ll.lat>=b.getSouth()&&ll.lng>=b.getWest()&&ll.lng<=b.getEast()){
+    const px=Math.round((ll.lng-b.getWest())/(b.getEast()-b.getWest())*(g.W-1)), py=Math.round((b.getNorth()-ll.lat)/(b.getNorth()-b.getSouth())*(g.H-1));
+    const z=g.depth[py*g.W+px]; if(isFinite(z)) dep=z; } }
+  if(dep==null) dep=await depthAt(ll.lat,ll.lng).catch(()=>null);
+  const hab=await habitatAt(ll.lat,ll.lng).catch(()=>null);
+  pendingAuto.depth=dep; pendingAuto.fondale=hab;
+  $('mfAuto').innerHTML='<b>In automatico:</b> '+now.toLocaleString('it-IT')+'<br>'+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5)+
+    '<br>profondità: '+fmtDepth(dep)+' &middot; fondale: '+(hab||'—');
+}
+function closeMark(){ $('markForm').style.display='none'; marking=false; $('btnMark').classList.remove('active'); map.getContainer().style.cursor=''; }
+$('mfSave').onclick=()=>{ if(!pendingAuto) return;
+  marks.push(Object.assign({},pendingAuto,{specie:$('mfSpecie').value.trim(),peso:$('mfPeso').value.trim(),note:$('mfNote').value.trim()}));
+  localStorage.setItem('pr_marks',JSON.stringify(marks)); $('lMarks').checked=true; renderMarks(); closeMark(); };
+$('mfCancel').onclick=closeMark; $('mfClose').onclick=closeMark;
+$('btnMark').onclick=()=>{ marking=!marking; $('btnMark').classList.toggle('active',marking);
+  map.getContainer().style.cursor=marking?'crosshair':'';
+  $('info').style.display='block'; $('info').innerHTML=marking?'<b>Segna punto</b>: tocca sulla mappa dove hai pescato/catturato':''; if(!marking)$('info').style.display='none'; };
+$('lMarks').onchange=renderMarks;
+renderMarks();
 </script>
 <script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
