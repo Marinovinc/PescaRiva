@@ -478,12 +478,13 @@ async function loadSDB(feature){
       const ed=emodAt(eg, yN-(py/(H-1))*(yN-yS), xW+(px/(W-1))*(xE-xW));
       if(ed!=null&&ed<-1&&ed>-25){ xs.push(p); ys.push(ed); } } fit=linfit(xs,ys); }
     let calibSrc = (fit&&fit.a<0)?'EMODnet ~115 m':'', nManual=0;
-    // Calibrazione dal PROFILO REALE di Sabaudia (LiDAR+ecoscandaglio ISPRA/ENEA) -> ancora i metri assoluti al profilo misurato (EMODnet è troppo grezzo sottocosta)
-    if(inSabaudia(bnds)){ try{
+    // Calibrazione dal PROFILO REALE di Sabaudia (LiDAR+ecoscandaglio ISPRA/ENEA); stesso profilo tipo per il litorale sabbioso laziale. EMODnet è troppo grezzo sottocosta.
+    const _sab=inSabaudia(bnds), _sandy=_sab||inLazioSandy(bnds);
+    if(_sandy){ try{
       const sd=computeSeaDistance(ps,W,H,bnds); const xs=[],ys=[];
       for(let i=0;i<W*H;i+=2){ if(isNaN(ps[i])||sd.wcomp[i]!==sd.seaComp||sd.dist[i]<1) continue;
         const D=sd.dist[i]*sd.cellM; if(D>350) continue; xs.push(ps[i]); ys.push(sabaudiaRef(D)); }
-      const pf=linfit(xs,ys); if(pf&&pf.a<0){ fit=pf; calibSrc='profilo Sabaudia (ISPRA/ENEA)'; }
+      const pf=linfit(xs,ys); if(pf&&pf.a<0){ fit=pf; calibSrc=_sab?'profilo Sabaudia (ISPRA/ENEA)':'profilo tipo sabbioso (stima)'; }
     }catch(_){} }
     // Calibrazione manuale: profondità note dell'utente (carta nautica/scandaglio) -> prevale su tutto
     try{ const cp=JSON.parse(localStorage.getItem('pr_calib')||'[]'), cx=[],cy=[];
@@ -625,6 +626,8 @@ const CAST_M=140;   // portata tipica del lancio da riva
 // fondale dolcissimo, barre entro -5 m fino a ~200 m, poi verso la profondità di chiusura ~ -7,5/-8 m.
 function sabaudiaRef(D){ if(D<=0) return 0; if(D<=200) return -(D/200)*5; return -Math.min(8, 5+(D-200)*2.5/200); }
 function inSabaudia(b){ const la=(b.getNorth()+b.getSouth())/2, lo=(b.getWest()+b.getEast())/2; return la>41.15&&la<41.45&&lo>12.85&&lo<13.10; }
+// Litorale sabbioso laziale (Ostia->Terracina): profilo tipo (stima); esclude le coste rocciose tipo Ischia (lon>13.5)
+function inLazioSandy(b){ const la=(b.getNorth()+b.getSouth())/2, lo=(b.getWest()+b.getEast())/2; return la>40.9&&la<41.95&&lo>11.9&&lo<13.5; }
 // Distanza dal mare (celle) + cellM + componenti acqua/mare. Usa la maschera NaN come "terra", con apertura morfologica per togliere la schiuma/surf.
 function computeSeaDistance(depth,W,H,b){
   const N=b.getNorth(),S=b.getSouth(),Wd=b.getWest(),E=b.getEast(), midLat=(N+S)/2;
