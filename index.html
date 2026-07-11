@@ -42,7 +42,7 @@
     border-radius:10px;padding:7px 10px 4px;display:none;box-shadow:0 4px 16px rgba(0,0,0,.5)}
   #profile .phd{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:3px}
   #profile .phd b{color:#16e0ff}
-  #profile canvas{display:block;width:100%;height:96px}
+  #profile canvas{display:block;width:100%;height:96px;cursor:crosshair}
   #profClose{background:none;border:none;color:#cfe0f2;font-size:15px;cursor:pointer;line-height:1}
   #preyRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
   #preyRow .pchip{background:#0c2033;border:1px solid #23415f;border-radius:20px;padding:3px 9px;font-size:11.5px;color:#dfeaf5;white-space:nowrap}
@@ -232,14 +232,15 @@ async function habitatAt(lat,lon){
   }catch(e){ return null; }
 }
 // ---- RIGHELLO LANCIO (2 punti A/B trascinabili, distanza sulla linea) ----
-let rulerPts=[], rulerLine=null, rulerMarks=[], rulerLbl=null;
+let rulerPts=[], rulerLine=null, rulerMarks=[], rulerLbl=null, rulerDragging=false, rulerDragEnd=0;
 function fmtM(m){ return m>=1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m'; }
 function rulerIcon(l){ return L.divIcon({className:'',html:'<div class="rmk">'+l+'</div>',iconSize:[22,22],iconAnchor:[11,11]}); }
 function drawRuler(){
   rulerMarks.forEach(m=>map.removeLayer(m)); rulerMarks=[];
   rulerPts.forEach((p,idx)=>{ const m=L.marker(p,{icon:rulerIcon(idx===0?'A':'B'),draggable:true,autoPan:true}).addTo(map);
+    m.on('dragstart',()=>{ rulerDragging=true; });
     m.on('drag',e=>{ const ll=e.target.getLatLng(); rulerPts[idx]=[ll.lat,ll.lng]; redrawRulerLine(false); });
-    m.on('dragend',e=>{ const ll=e.target.getLatLng(); rulerPts[idx]=[ll.lat,ll.lng]; redrawRulerLine(true); });
+    m.on('dragend',e=>{ const ll=e.target.getLatLng(); rulerPts[idx]=[ll.lat,ll.lng]; rulerDragging=false; rulerDragEnd=Date.now(); redrawRulerLine(true); });
     rulerMarks.push(m); });
   redrawRulerLine(true);
 }
@@ -337,6 +338,7 @@ function setPreyTime(t){ preyTime=t; renderPreyPanel(); if(rulerPts.length>=2) d
 $('btnPrey').onclick=()=>{ renderPreyPanel(); $('preyPanel').style.display='block'; };
 $('preyClose').onclick=()=>{ $('preyPanel').style.display='none'; };
 // Profilo del fondale lungo la linea di lancio
+let lastProfile=null, profileBase=null;
 function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');
   let total=0; const segD=[0]; for(let i=1;i<pts.length;i++){ total+=map.distance(pts[i-1],pts[i]); segD.push(total); }
   if(total<=0){ $('profile').style.display='none'; return; }
@@ -349,7 +351,7 @@ function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.ge
     const lat=a[0]+(q[0]-a[0])*t, lng=a[1]+(q[1]-a[1])*t, z=sdbDepthAt(lat,lng);
     samp.push({d:dd,z}); if(z!=null){ anyDepth=true; if(-z>maxDepth) maxDepth=-z; } }
   ctx.clearRect(0,0,W,H);
-  if(!anyDepth){ $('profTxt').innerHTML='Lancio <b>'+fmtM(total)+'</b> &middot; attiva <b>SDB</b> per il profilo del fondale';
+  if(!anyDepth){ lastProfile=null; profileBase=null; $('profTxt').innerHTML='Lancio <b>'+fmtM(total)+'</b> &middot; attiva <b>SDB</b> per il profilo del fondale';
     ctx.fillStyle='#8fb0cc'; ctx.font='22px system-ui'; ctx.textAlign='center'; ctx.fillText('nessuna profondità satellitare su questa linea',W/2,H/2); ctx.textAlign='left'; $('profile').style.display='block'; return; }
   const padL=52,padR=12,padT=12,padB=22, plotW=W-padL-padR, plotH=H-padT-padB;
   const dmax=Math.max(5,Math.ceil(maxDepth/2)*2), X=d=>padL+d/total*plotW, Y=m=>padT+(m/dmax)*plotH;
@@ -364,9 +366,23 @@ function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.ge
   // linea del fondale
   ctx.beginPath(); let first=true; for(const s of samp){ if(s.z==null) continue; const x=X(s.d),y=Y(-s.z); if(first){ctx.moveTo(x,y);first=false;} else ctx.lineTo(x,y); }
   ctx.strokeStyle='#16e0ff'; ctx.lineWidth=2.5; ctx.stroke();
+  profileBase=ctx.getImageData(0,0,W,H); lastProfile={total,padL,padT,plotW,plotH,dmax,samp};   // per il click sul grafico
   const calib=sdbGrid&&sdbGrid.calib;
-  $('profTxt').innerHTML='<b>Profilo fondale</b> &middot; lancio '+fmtM(total)+' &middot; max &minus;'+maxDepth.toFixed(1)+' m'+(calib?'':' <span class="sub">(relativo)</span>');
+  $('profTxt').innerHTML='<b>Profilo fondale</b> &middot; lancio '+fmtM(total)+' &middot; max &minus;'+maxDepth.toFixed(1)+' m'+(calib?'':' <span class="sub">(relativo)</span>')+' &middot; <span class="sub">tocca il grafico</span>';
   $('profile').style.display='block'; }
+// Click sul grafico: mostra distanza dal punto A + profondità in quel punto
+function markProfileAt(d){ if(!lastProfile||!profileBase) return; const lp=lastProfile, cv=$('profCv'), ctx=cv.getContext('2d');
+  d=Math.max(0,Math.min(lp.total,d)); ctx.putImageData(profileBase,0,0);
+  const X=x=>lp.padL+x/lp.total*lp.plotW, Y=m=>lp.padT+(m/lp.dmax)*lp.plotH;
+  const kf=d/lp.total*(lp.samp.length-1), k0=Math.floor(kf), k1=Math.min(lp.samp.length-1,k0+1), t=kf-k0;
+  const z0=lp.samp[k0].z, z1=lp.samp[k1].z, z=(z0!=null&&z1!=null)?(z0+(z1-z0)*t):(z0!=null?z0:z1);
+  const x=X(d);
+  ctx.strokeStyle='#ffd54a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,lp.padT); ctx.lineTo(x,lp.padT+lp.plotH); ctx.stroke();
+  if(z!=null){ const y=Y(-z); ctx.fillStyle='#ffd54a'; ctx.beginPath(); ctx.arc(x,y,6,0,7); ctx.fill(); ctx.strokeStyle='#04121e'; ctx.lineWidth=2; ctx.stroke(); }
+  $('profTxt').innerHTML='<b>&#128205; Da A: '+fmtM(d)+'</b>'+(z!=null?(' &middot; profondità <b>&minus;'+Math.abs(z).toFixed(1)+' m</b>'):' &middot; fuori dai dati')+' <span class="sub">&middot; tocca un altro punto</span>';
+}
+$('profCv').addEventListener('click', e=>{ if(!lastProfile) return; const cv=$('profCv'), r=cv.getBoundingClientRect();
+  const cx=(e.clientX-r.left)/r.width*cv.width; markProfileAt((cx-lastProfile.padL)/lastProfile.plotW*lastProfile.total); });
 $('profClose').onclick=()=>{ $('profile').style.display='none'; };
 $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
   if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca il punto <b>A</b> (riva) e il punto <b>B</b> (meta del lancio)<br><span class="sub">poi trascina A e B per aggiustare &middot; distanza sulla linea &middot; con SDB attiva vedi il profilo</span>'; }
@@ -377,7 +393,8 @@ map.on('click', async e=>{
   const {lat,lng}=e.latlng;
   if(calibrating){ addCalibPoint(e.latlng); return; }   // modo "calibra profondità con punto noto"
   if(marking){ openMarkForm(e.latlng); return; }   // modo "segna punto/cattura"
-  if($('lRuler').checked){ if(rulerPts.length>=2) rulerPts=[[lat,lng]]; else rulerPts.push([lat,lng]); drawRuler(); return; }
+  if($('lRuler').checked){ if(rulerDragging||Date.now()-rulerDragEnd<400) return;   // non resettare per un click residuo del drag
+    if(rulerPts.length>=2) rulerPts=[[lat,lng]]; else rulerPts.push([lat,lng]); drawRuler(); return; }
   // Profondità dalla SDB satellitare (10 m) se disponibile e nel riquadro
   if(sdbGrid){ const g=sdbGrid,b=g.bnds;
     if(lat<=b.getNorth()&&lat>=b.getSouth()&&lng>=b.getWest()&&lng<=b.getEast()){
