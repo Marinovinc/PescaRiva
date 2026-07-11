@@ -478,7 +478,14 @@ async function loadSDB(feature){
       const ed=emodAt(eg, yN-(py/(H-1))*(yN-yS), xW+(px/(W-1))*(xE-xW));
       if(ed!=null&&ed<-1&&ed>-25){ xs.push(p); ys.push(ed); } } fit=linfit(xs,ys); }
     let calibSrc = (fit&&fit.a<0)?'EMODnet ~115 m':'', nManual=0;
-    // Calibrazione manuale: profondità note dell'utente (carta nautica/scandaglio) -> prevale su EMODnet
+    // Calibrazione dal PROFILO REALE di Sabaudia (LiDAR+ecoscandaglio ISPRA/ENEA) -> ancora i metri assoluti al profilo misurato (EMODnet è troppo grezzo sottocosta)
+    if(inSabaudia(bnds)){ try{
+      const sd=computeSeaDistance(ps,W,H,bnds); const xs=[],ys=[];
+      for(let i=0;i<W*H;i+=2){ if(isNaN(ps[i])||sd.wcomp[i]!==sd.seaComp||sd.dist[i]<1) continue;
+        const D=sd.dist[i]*sd.cellM; if(D>350) continue; xs.push(ps[i]); ys.push(sabaudiaRef(D)); }
+      const pf=linfit(xs,ys); if(pf&&pf.a<0){ fit=pf; calibSrc='profilo Sabaudia (ISPRA/ENEA)'; }
+    }catch(_){} }
+    // Calibrazione manuale: profondità note dell'utente (carta nautica/scandaglio) -> prevale su tutto
     try{ const cp=JSON.parse(localStorage.getItem('pr_calib')||'[]'), cx=[],cy=[];
       for(const c of cp){ if(c.lat>=yS&&c.lat<=yN&&c.lng>=xW&&c.lng<=xE){
         let px=Math.round((c.lng-xW)/(xE-xW)*(W-1)), py=Math.round((yN-c.lat)/(yN-yS)*(H-1));
@@ -611,22 +618,59 @@ function drawCanaloni(){
   markCanalMouths(res,dp,W,H,b);
   updLegend();
 }
-// Marca i canaloni: nuclei = minimi locali del rilievo; distingue per PROFONDITA' i "sotto riva" (bassi, a portata di lancio) dagli "esterni" (profondi)
+// Marca i canaloni per DISTANZA DALLA RIVA: "sotto riva" (a portata di lancio, <=140 m) vs "esterni".
+// Distanza calcolata dalla sola TERRAFERMA (componente NaN più grande), ignorando i falsi NaN in acqua.
+const CAST_M=140;   // portata tipica del lancio da riva
+// Profilo batimetrico di riferimento del litorale di Sabaudia (dati LiDAR+ecoscandaglio ISPRA/ENEA, Taramelli et al. 2020):
+// fondale dolcissimo, barre entro -5 m fino a ~200 m, poi verso la profondità di chiusura ~ -7,5/-8 m.
+function sabaudiaRef(D){ if(D<=0) return 0; if(D<=200) return -(D/200)*5; return -Math.min(8, 5+(D-200)*2.5/200); }
+function inSabaudia(b){ const la=(b.getNorth()+b.getSouth())/2, lo=(b.getWest()+b.getEast())/2; return la>41.15&&la<41.45&&lo>12.85&&lo<13.10; }
+// Distanza dal mare (celle) + cellM + componenti acqua/mare. Usa la maschera NaN come "terra", con apertura morfologica per togliere la schiuma/surf.
+function computeSeaDistance(depth,W,H,b){
+  const N=b.getNorth(),S=b.getSouth(),Wd=b.getWest(),E=b.getEast(), midLat=(N+S)/2;
+  const cellM=((E-Wd)*111320*Math.cos(midLat*Math.PI/180))/(W-1);
+  const land=new Uint8Array(W*H); for(let i=0;i<W*H;i++) land[i]=isNaN(depth[i])?1:0;
+  const rr=4, er=new Uint8Array(W*H);
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){ let all=1;
+    for(let dy=-rr;dy<=rr&&all;dy++){ const yy=py+dy; if(yy<0||yy>=H)continue; const row=yy*W;
+      for(let dx=-rr;dx<=rr;dx++){ const xx=px+dx; if(xx<0||xx>=W)continue; if(!land[row+xx]){ all=0; break; } } }
+    er[py*W+px]=all; }
+  const op=new Uint8Array(W*H);
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){ let any=0;
+    for(let dy=-rr;dy<=rr&&!any;dy++){ const yy=py+dy; if(yy<0||yy>=H)continue; const row=yy*W;
+      for(let dx=-rr;dx<=rr;dx++){ const xx=px+dx; if(xx<0||xx>=W)continue; if(er[row+xx]){ any=1; break; } } }
+    op[py*W+px]=any; }
+  const dist=new Int32Array(W*H).fill(-1), q=[];
+  for(let i=0;i<W*H;i++) if(op[i]){ dist[i]=0; q.push(i); }
+  for(let h=0;h<q.length;h++){ const i=q[h], py=(i/W)|0, px=i-py*W, dn=dist[i]+1;
+    if(px>0&&dist[i-1]<0){dist[i-1]=dn;q.push(i-1);} if(px<W-1&&dist[i+1]<0){dist[i+1]=dn;q.push(i+1);}
+    if(py>0&&dist[i-W]<0){dist[i-W]=dn;q.push(i-W);} if(py<H-1&&dist[i+W]<0){dist[i+W]=dn;q.push(i+W);} }
+  const wcomp=new Int32Array(W*H).fill(-1); let wnc=0, seaComp=-1, seaSz=0; const wst=[];
+  for(let s=0;s<W*H;s++){ if(op[s]||wcomp[s]>=0) continue; let sz=0, border=false; wst.length=0; wst.push(s); wcomp[s]=wnc;
+    while(wst.length){ const i=wst.pop(), py=(i/W)|0, px=i-py*W; sz++; if(px===0||py===0||px===W-1||py===H-1) border=true;
+      if(px>0&&!op[i-1]&&wcomp[i-1]<0){wcomp[i-1]=wnc;wst.push(i-1);}
+      if(px<W-1&&!op[i+1]&&wcomp[i+1]<0){wcomp[i+1]=wnc;wst.push(i+1);}
+      if(py>0&&!op[i-W]&&wcomp[i-W]<0){wcomp[i-W]=wnc;wst.push(i-W);}
+      if(py<H-1&&!op[i+W]&&wcomp[i+W]<0){wcomp[i+W]=wnc;wst.push(i+W);} }
+    if(border && sz>seaSz){ seaSz=sz; seaComp=wnc; } wnc++; }
+  return {dist,cellM,wcomp,seaComp};
+}
 function markCanalMouths(res,depth,W,H,b){
   const N=b.getNorth(),S=b.getSouth(),Wd=b.getWest(),E=b.getEast();
+  const {dist,cellM,wcomp,seaComp}=computeSeaDistance(depth,W,H,b);
+  // nuclei dei canali = minimi locali del rilievo
   const R=10, cand=[];
   for(let py=2;py<H-2;py++)for(let px=2;px<W-2;px++){ const i=py*W+px, r=res[i];
-    if(isNaN(r)||r>-0.3) continue; let isMin=true;
+    if(isNaN(r)||r>-0.18||!isFinite(depth[i])||dist[i]<1||wcomp[i]!==seaComp) continue; let isMin=true;
     for(let dy=-R;dy<=R&&isMin;dy++){ const yy=py+dy; if(yy<0||yy>=H)continue; const row=yy*W;
       for(let dx=-R;dx<=R;dx++){ const xx=px+dx; if(xx<0||xx>=W)continue; const rj=res[row+xx]; if(!isNaN(rj)&&rj<r){ isMin=false; break; } } }
-    if(isMin && isFinite(depth[i])) cand.push({i,r,dep:depth[i]}); }
-  cand.sort((a,c)=>a.r-c.r);   // canali più marcati prima
-  const near=cand.filter(c=>c.dep<=-0.4 && c.dep>=-2.8).slice(0,8);   // sotto riva: bassi, a portata di lancio
-  const far =cand.filter(c=>c.dep<-2.8).slice(0,4);                   // esterni: profondi
+    if(isMin) cand.push({i,r,dep:depth[i],dm:dist[i]*cellM}); }
+  const near=cand.filter(c=>c.dm<=CAST_M).sort((a,c)=>a.dm-c.dm).slice(0,10);   // a portata di lancio, più vicini prima
+  const far =cand.filter(c=>c.dm>CAST_M).sort((a,c)=>a.r-c.r).slice(0,3);        // esterni
   near.forEach(c=>c.near=true); far.forEach(c=>c.near=false);
   [...near,...far].forEach(cp=>{ const py=(cp.i/W)|0, px=cp.i-py*W, lat=N-(py/(H-1))*(N-S), lng=Wd+(px/(W-1))*(E-Wd);
     L.marker([lat,lng],{icon: cp.near?canalIconNear:canalIcon}).addTo(canalPins)
-     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m'+(cp.near?' &middot; a portata di lancio':' &middot; verso il largo')+'</span>'); });
+     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m &middot; ~'+Math.round(cp.dm)+' m dalla riva'+(cp.near?' &middot; a portata di lancio':'')+'</span>'); });
 }
 $('lCanal').onchange=async()=>{
   if(!$('lCanal').checked){ drawCanaloni(); return; }
