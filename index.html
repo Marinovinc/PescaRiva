@@ -80,6 +80,8 @@
   .prpin{font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
   .canalpin{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(126,66,224,.92);border:2px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,.6)}
   .canalpin.near{background:rgba(40,190,120,.95)}
+  .rmk{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:#ff5be0;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.6);cursor:grab}
+  .rlbl{position:absolute;transform:translate(-50%,-50%);background:rgba(255,91,224,.95);color:#fff;font-weight:800;font-size:12px;padding:2px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.5)}
   .leaflet-popup-content b{color:#16e0ff}
   .prDelBtn{margin-top:6px;padding:5px 9px;border-radius:6px;border:1px solid #ff5d7a;background:#2a1420;color:#ff9bb0;font-size:12px;cursor:pointer}
 </style>
@@ -229,15 +231,27 @@ async function habitatAt(lat,lon){
     const t=pr.folk_5cl_txt||pr.original_substrate||pr.folk_7cl_txt; return t?(''+t).replace(/^\d+\.\s*/,''):null;
   }catch(e){ return null; }
 }
-// ---- RIGHELLO LANCIO (distanza riva -> meta, per il surfcasting) ----
-let rulerPts=[], rulerLine=null, rulerMarks=[];
+// ---- RIGHELLO LANCIO (2 punti A/B trascinabili, distanza sulla linea) ----
+let rulerPts=[], rulerLine=null, rulerMarks=[], rulerLbl=null;
 function fmtM(m){ return m>=1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m'; }
+function rulerIcon(l){ return L.divIcon({className:'',html:'<div class="rmk">'+l+'</div>',iconSize:[22,22],iconAnchor:[11,11]}); }
 function drawRuler(){
-  if(rulerLine){ map.removeLayer(rulerLine); rulerLine=null; } rulerMarks.forEach(m=>map.removeLayer(m)); rulerMarks=[];
-  if(rulerPts.length>=2) rulerLine=L.polyline(rulerPts,{color:'#ff5be0',weight:3,dashArray:'6,5'}).addTo(map);
-  rulerPts.forEach(p=>rulerMarks.push(L.circleMarker(p,{radius:5,color:'#fff',fillColor:'#ff5be0',fillOpacity:1,weight:1}).addTo(map)));
-  if(rulerPts.length>=2){ $('info').style.display='none'; drawProfile(rulerPts); }
-  else $('profile').style.display='none';
+  rulerMarks.forEach(m=>map.removeLayer(m)); rulerMarks=[];
+  rulerPts.forEach((p,idx)=>{ const m=L.marker(p,{icon:rulerIcon(idx===0?'A':'B'),draggable:true,autoPan:true}).addTo(map);
+    m.on('drag',e=>{ const ll=e.target.getLatLng(); rulerPts[idx]=[ll.lat,ll.lng]; redrawRulerLine(false); });
+    m.on('dragend',e=>{ const ll=e.target.getLatLng(); rulerPts[idx]=[ll.lat,ll.lng]; redrawRulerLine(true); });
+    rulerMarks.push(m); });
+  redrawRulerLine(true);
+}
+function redrawRulerLine(withProfile){
+  if(rulerLine){ map.removeLayer(rulerLine); rulerLine=null; }
+  if(rulerLbl){ map.removeLayer(rulerLbl); rulerLbl=null; }
+  if(rulerPts.length>=2){
+    rulerLine=L.polyline(rulerPts,{color:'#ff5be0',weight:3,dashArray:'6,5'}).addTo(map);
+    const d=map.distance(rulerPts[0],rulerPts[1]), mid=[(rulerPts[0][0]+rulerPts[1][0])/2,(rulerPts[0][1]+rulerPts[1][1])/2];
+    rulerLbl=L.marker(mid,{icon:L.divIcon({className:'',html:'<div class="rlbl">'+fmtM(d)+'</div>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(map);
+    $('info').style.display='none'; if(withProfile) drawProfile(rulerPts);
+  } else $('profile').style.display='none';
 }
 // Profondità SDB a un punto (metri negativi) o null
 function sdbDepthAt(lat,lng){ if(!sdbGrid) return null; const g=sdbGrid,b=g.bnds;
@@ -355,7 +369,7 @@ function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.ge
   $('profile').style.display='block'; }
 $('profClose').onclick=()=>{ $('profile').style.display='none'; };
 $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
-  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca dove sei sulla riva, poi la meta del lancio<br><span class="sub">tipico surfcasting 80&ndash;150 m &middot; con SDB attiva vedi il profilo del fondale</span>'; }
+  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca il punto <b>A</b> (riva) e il punto <b>B</b> (meta del lancio)<br><span class="sub">poi trascina A e B per aggiustare &middot; distanza sulla linea &middot; con SDB attiva vedi il profilo</span>'; }
   else { $('info').style.display='none'; $('profile').style.display='none'; } };
 
 let infoT=null;
@@ -363,7 +377,7 @@ map.on('click', async e=>{
   const {lat,lng}=e.latlng;
   if(calibrating){ addCalibPoint(e.latlng); return; }   // modo "calibra profondità con punto noto"
   if(marking){ openMarkForm(e.latlng); return; }   // modo "segna punto/cattura"
-  if($('lRuler').checked){ rulerPts.push([lat,lng]); drawRuler(); return; }
+  if($('lRuler').checked){ if(rulerPts.length>=2) rulerPts=[[lat,lng]]; else rulerPts.push([lat,lng]); drawRuler(); return; }
   // Profondità dalla SDB satellitare (10 m) se disponibile e nel riquadro
   if(sdbGrid){ const g=sdbGrid,b=g.bnds;
     if(lat<=b.getNorth()&&lat>=b.getSouth()&&lng>=b.getWest()&&lng<=b.getEast()){
