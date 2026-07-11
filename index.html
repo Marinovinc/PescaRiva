@@ -338,10 +338,12 @@ function setPreyTime(t){ preyTime=t; renderPreyPanel(); if(rulerPts.length>=2) d
 $('btnPrey').onclick=()=>{ renderPreyPanel(); $('preyPanel').style.display='block'; };
 $('preyClose').onclick=()=>{ $('preyPanel').style.display='none'; };
 // Profilo del fondale lungo la linea di lancio
-let lastProfile=null, profileBase=null;
+let lastProfile=null, profileBase=null, profDot=null;
+function clearProfDot(){ if(profDot){ map.removeLayer(profDot); profDot=null; } }
 function drawProfile(pts){ const cv=$('profCv'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');
   let total=0; const segD=[0]; for(let i=1;i<pts.length;i++){ total+=map.distance(pts[i-1],pts[i]); segD.push(total); }
   if(total<=0){ $('profile').style.display='none'; return; }
+  clearProfDot();   // il pallino si rimette al prossimo tocco sul grafico
   renderPrey(total, null);
   const land=pts[pts.length-1];   // punto d'arrivo del lancio -> substrato reale (async)
   substrateCat(land[0],land[1]).then(cat=>{ if(cat) renderPrey(total, cat); }).catch(()=>{});
@@ -380,13 +382,17 @@ function markProfileAt(d){ if(!lastProfile||!profileBase) return; const lp=lastP
   ctx.strokeStyle='#ffd54a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,lp.padT); ctx.lineTo(x,lp.padT+lp.plotH); ctx.stroke();
   if(z!=null){ const y=Y(-z); ctx.fillStyle='#ffd54a'; ctx.beginPath(); ctx.arc(x,y,6,0,7); ctx.fill(); ctx.strokeStyle='#04121e'; ctx.lineWidth=2; ctx.stroke(); }
   $('profTxt').innerHTML='<b>&#128205; Da A: '+fmtM(d)+'</b>'+(z!=null?(' &middot; profondità <b>&minus;'+Math.abs(z).toFixed(1)+' m</b>'):' &middot; fuori dai dati')+' <span class="sub">&middot; tocca un altro punto</span>';
+  // pallino corrispondente sulla linea A-B nella mappa
+  if(rulerPts.length>=2){ const A=rulerPts[0], B=rulerPts[1], tt=lp.total?d/lp.total:0, ll=[A[0]+(B[0]-A[0])*tt, A[1]+(B[1]-A[1])*tt];
+    if(!profDot) profDot=L.circleMarker(ll,{radius:7,color:'#04121e',fillColor:'#ffd54a',fillOpacity:1,weight:2,interactive:false}).addTo(map);
+    else profDot.setLatLng(ll); }
 }
 $('profCv').addEventListener('click', e=>{ if(!lastProfile) return; const cv=$('profCv'), r=cv.getBoundingClientRect();
   const cx=(e.clientX-r.left)/r.width*cv.width; markProfileAt((cx-lastProfile.padL)/lastProfile.plotW*lastProfile.total); });
-$('profClose').onclick=()=>{ $('profile').style.display='none'; };
+$('profClose').onclick=()=>{ $('profile').style.display='none'; clearProfDot(); };
 $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
   if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca il punto <b>A</b> (riva) e il punto <b>B</b> (meta del lancio)<br><span class="sub">poi trascina A e B per aggiustare &middot; distanza sulla linea &middot; con SDB attiva vedi il profilo</span>'; }
-  else { $('info').style.display='none'; $('profile').style.display='none'; } };
+  else { $('info').style.display='none'; $('profile').style.display='none'; clearProfDot(); } };
 
 let infoT=null;
 map.on('click', async e=>{
