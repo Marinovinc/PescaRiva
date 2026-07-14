@@ -80,6 +80,9 @@
   .prpin{font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
   .canalpin{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(126,66,224,.92);border:2px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,.6)}
   .canalpin.near{background:rgba(40,190,120,.95)}
+  .homepin{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:17px;background:#8dff3a;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 7px rgba(0,0,0,.6)}
+  .homelbl{background:rgba(141,255,58,.95);color:#04121e;font-weight:800;font-size:11px;border:none;border-radius:8px;padding:1px 7px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  .homelbl::before{display:none}
   .rmk{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:#ff5be0;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.6);cursor:grab}
   .rlbl{position:absolute;transform:translate(-50%,-50%);background:rgba(255,91,224,.95);color:#fff;font-weight:800;font-size:12px;padding:2px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.5)}
   .leaflet-popup-content b{color:#16e0ff}
@@ -154,12 +157,25 @@
 const $=id=>document.getElementById(id);
 const map=L.map('map',{center:[41.35002,12.96553],zoom:16,zoomControl:true,attributionControl:true});   // Punto A9 (spot dell'utente) - default
 try{ const _h=JSON.parse(localStorage.getItem('pr_home')||'null'); if(_h&&isFinite(_h.lat)) map.setView([_h.lat,_h.lng],_h.z||16); }catch(e){}   // partenza personalizzata salvata dall'utente
+// Segnaposto fisso del punto di partenza A9 (sempre visibile)
+const A9=[41.35002,12.96553];
+const homeIcon=L.divIcon({className:'',html:'<div class="homepin">&#127907;</div>',iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-14]});
+L.marker(A9,{icon:homeIcon,zIndexOffset:600,title:'A9 — il mio spot'}).addTo(map)
+  .bindTooltip('A9',{permanent:true,direction:'top',offset:[0,-14],className:'homelbl'})
+  .bindPopup('<b>&#127907; A9</b><br><span class="sub">il mio punto di partenza</span>');
 
+// Cellulare/touch: pannello chiuso + canaloni e righello attivi di default
+const isMobile = !!(window.matchMedia && (window.matchMedia('(pointer:coarse)').matches || window.innerWidth<820));
 // Pannello dei comandi a scomparsa (stato ricordato)
 function showPanel(open){ $('panel').style.display=open?'':'none'; $('panelOpen').style.display=open?'none':'flex'; localStorage.setItem('pr_panel',open?'open':'closed'); }
 $('panelHide').onclick=()=>showPanel(false);
 $('panelOpen').onclick=()=>showPanel(true);
-if(localStorage.getItem('pr_panel')==='closed') showPanel(false);
+const _savedPanel=localStorage.getItem('pr_panel');
+if(_savedPanel==='closed' || (_savedPanel===null && isMobile)) showPanel(false);   // su cellulare: chiuso di default
+if(isMobile) setTimeout(()=>{   // attiva canaloni + righello dopo il caricamento iniziale
+  if($('lCanal') && !$('lCanal').checked){ $('lCanal').checked=true; $('lCanal').onchange(); }
+  if($('lRuler') && !$('lRuler').checked){ $('lRuler').checked=true; $('lRuler').onchange(); }
+}, 1800);
 map.attributionControl.setPrefix('PescaRiva');
 
 // ---- BASI ----
