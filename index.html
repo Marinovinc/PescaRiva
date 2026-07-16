@@ -161,9 +161,9 @@ try{ const _h=JSON.parse(localStorage.getItem('pr_home')||'null'); if(_h&&isFini
 // Segnaposto fisso del punto di partenza A9 (sempre visibile)
 const A9=[41.35002,12.96553];
 const homeIcon=L.divIcon({className:'',html:'<div class="homepin">&#127907;</div>',iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-14]});
-L.marker(A9,{icon:homeIcon,zIndexOffset:600,title:'A9 — il mio spot'}).addTo(map)
+rulerSnappable(L.marker(A9,{icon:homeIcon,zIndexOffset:600,title:'A9 — il mio spot'}).addTo(map)
   .bindTooltip('A9',{permanent:true,direction:'top',offset:[0,-14],className:'homelbl'})
-  .bindPopup('<b>&#127907; A9</b><br><span class="sub">il mio punto di partenza</span>');
+  .bindPopup('<b>&#127907; A9</b><br><span class="sub">il mio punto di partenza</span>'));
 
 // Cellulare/touch: pannello chiuso + canaloni e righello attivi di default
 const isMobile = !!(window.matchMedia && (window.matchMedia('(pointer:coarse)').matches || window.innerWidth<820));
@@ -252,6 +252,10 @@ async function habitatAt(lat,lon){
 let rulerPts=[], rulerLine=null, rulerMarks=[], rulerLbl=null, rulerDragging=false, rulerDragEnd=0;
 function fmtM(m){ return m>=1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m'; }
 function rulerIcon(l){ return L.divIcon({className:'',html:'<div class="rmk">'+l+'</div>',iconSize:[22,22],iconAnchor:[11,11]}); }
+// Aggancio del righello ai segnaposto (canaloni, catture, A9, "sei qui"): col righello attivo,
+// toccare un marker mette il punto B ESATTAMENTE sulle sue coordinate (invece di aprirne il popup).
+function rulerAddPoint(ll){ const p=[ll.lat,ll.lng]; if(rulerPts.length>=2) rulerPts[1]=p; else rulerPts.push(p); drawRuler(); }
+function rulerSnappable(m){ if(m&&m.on) m.on('click',function(){ if($('lRuler')&&$('lRuler').checked){ rulerAddPoint(m.getLatLng()); if(m.closePopup) m.closePopup(); } }); return m; }
 function drawRuler(){
   rulerMarks.forEach(m=>map.removeLayer(m)); rulerMarks=[];
   rulerPts.forEach((p,idx)=>{ const m=L.marker(p,{icon:rulerIcon(idx===0?'A':'B'),draggable:true,autoPan:true}).addTo(map);
@@ -408,7 +412,7 @@ $('profCv').addEventListener('click', e=>{ if(!lastProfile) return; const cv=$('
   const cx=(e.clientX-r.left)/r.width*cv.width; markProfileAt((cx-lastProfile.padL)/lastProfile.plotW*lastProfile.total); });
 $('profClose').onclick=()=>{ $('profile').style.display='none'; clearProfDot(); };
 $('lRuler').onchange=()=>{ rulerPts=[]; drawRuler();
-  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca il punto <b>A</b> (riva) e il punto <b>B</b> (meta del lancio)<br><span class="sub">poi trascina A e B per aggiustare &middot; distanza sulla linea &middot; con SDB attiva vedi il profilo</span>'; }
+  if($('lRuler').checked){ $('info').style.display='block'; $('info').innerHTML='<b>Righello lancio</b>: tocca il punto <b>A</b> (riva) e il punto <b>B</b> (meta del lancio)<br><span class="sub">trascina A e B per aggiustare &middot; tocca un <b>canalone</b>/una cattura per agganciare B esatto &middot; con SDB attiva vedi il profilo</span>'; }
   else { $('info').style.display='none'; $('profile').style.display='none'; clearProfDot(); } };
 
 let infoT=null;
@@ -726,8 +730,8 @@ function markCanalMouths(res,depth,W,H,b){
   const far =cand.filter(c=>c.dm>CAST_M).sort((a,c)=>a.r-c.r).slice(0,3);        // esterni
   near.forEach(c=>c.near=true); far.forEach(c=>c.near=false);
   [...near,...far].forEach(cp=>{ const py=(cp.i/W)|0, px=cp.i-py*W, lat=N-(py/(H-1))*(N-S), lng=Wd+(px/(W-1))*(E-Wd);
-    L.marker([lat,lng],{icon: cp.near?canalIconNear:canalIcon}).addTo(canalPins)
-     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m &middot; ~'+Math.round(cp.dm)+' m dalla riva'+(cp.near?' &middot; a portata di lancio':'')+'</span>'); });
+    rulerSnappable(L.marker([lat,lng],{icon: cp.near?canalIconNear:canalIcon}).addTo(canalPins)
+     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m &middot; ~'+Math.round(cp.dm)+' m dalla riva'+(cp.near?' &middot; a portata di lancio':'')+'<br>&#128207; col righello attivo, tocca qui per agganciare B</span>')); });
 }
 $('lCanal').onchange=async()=>{
   if(!$('lCanal').checked){ drawCanaloni(); return; }
@@ -813,7 +817,7 @@ function popupHtml(m,idx){
   return h;
 }
 function renderMarks(){ markLayer.clearLayers(); if(!$('lMarks').checked) return;
-  marks.forEach((m,idx)=>{ L.marker([m.lat,m.lng],{icon:markIcon(!!m.specie)}).addTo(markLayer).bindPopup(popupHtml(m,idx)); });
+  marks.forEach((m,idx)=>{ rulerSnappable(L.marker([m.lat,m.lng],{icon:markIcon(!!m.specie)}).addTo(markLayer).bindPopup(popupHtml(m,idx))); });
 }
 window.prDelMark=function(idx){ marks.splice(idx,1); localStorage.setItem('pr_marks',JSON.stringify(marks)); map.closePopup(); renderMarks(); };
 async function openMarkForm(ll){
@@ -900,7 +904,7 @@ $('btnGps').onclick=()=>{
   $('info').style.display='block'; $('info').innerHTML='&#128205; Cerco la tua posizione GPS&hellip;';
   gpsWatch=navigator.geolocation.watchPosition(p=>{
     const la=p.coords.latitude, lo=p.coords.longitude, ac=p.coords.accuracy||30, ll=[la,lo];
-    if(!gpsMark){ gpsMark=L.circleMarker(ll,{radius:8,color:'#fff',fillColor:'#16e0ff',fillOpacity:1,weight:3}).addTo(map);
+    if(!gpsMark){ gpsMark=rulerSnappable(L.circleMarker(ll,{radius:8,color:'#fff',fillColor:'#16e0ff',fillOpacity:1,weight:3}).addTo(map));
       gpsAcc=L.circle(ll,{radius:ac,color:'#16e0ff',fillColor:'#16e0ff',fillOpacity:0.1,weight:1}).addTo(map); }
     else { gpsMark.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(ac); }
     gpsMark.bindPopup('&#128205; Sei qui &middot; &plusmn;'+Math.round(ac)+' m');
