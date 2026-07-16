@@ -331,7 +331,7 @@ function updLegend(){
 // ---- PROFONDITA' AL TOCCO (EMODnet WCS GeoTIFF, ~115 m) + tipo di fondale (GetFeatureInfo) ----
 const NATIVE=0.0010416666666666667;
 const WCS='https://ows.emodnet-bathymetry.eu/wcs?service=WCS&version=2.0.1&request=GetCoverage&coverageId=emodnet__mean&format=image/tiff';
-function fetchTO(url,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(url,{signal:c.signal}).finally(()=>clearTimeout(t));}
+function fetchTO(url,ms,opts){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(url,Object.assign({signal:c.signal},opts||{})).finally(()=>clearTimeout(t));}
 async function depthAt(lat,lon){
   try{ const d=0.02, url=WCS+'&subset=Lat('+(lat-d)+','+(lat+d)+')&subset=Long('+(lon-d)+','+(lon+d)+')&scalefactor=0.2';
     const r=await fetchTO(url,20000); if(!r.ok) return null; const buf=await r.arrayBuffer();
@@ -759,6 +759,38 @@ $('lIsoFine').onchange=()=>{ if($('lIsoFine').checked && !$('lIso').checked){ $(
 
 // ---- CANALONI: rilievo = profondità locale - tendenza regionale; colora a fasce truogoli(deeper)/barre(shallower) ----
 let canalOverlay=null; const canalPins=L.layerGroup().addTo(map);
+// ---- RICONOSCIMENTO PORTI (OpenStreetMap Overpass): i punti dentro un porto/marina NON sono di pesca -> esclusi ----
+let harborPolys=[], harborFetched={}, _lastCanal=null; const harborLayer=L.layerGroup().addTo(map);
+function pointInPoly(lat,lng,poly){ let inside=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
+  if(((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/((yj-yi)||1e-12)+xi)) inside=!inside; } return inside; }
+function inHarbor(lat,lng){ for(const poly of harborPolys) if(pointInPoly(lat,lng,poly)) return true; return false; }
+function addHarborPolys(polys){ for(const poly of (polys||[])){ if(!poly||poly.length<3) continue; harborPolys.push(poly);
+  L.polygon(poly,{color:'#ff9028',weight:1.4,fillColor:'#ff9028',fillOpacity:0.10,dashArray:'5,4',interactive:false}).addTo(harborLayer); } }
+async function ensureHarbors(b){
+  const key=[b.getSouth().toFixed(2),b.getWest().toFixed(2),b.getNorth().toFixed(2),b.getEast().toFixed(2)].join(',');
+  if(harborFetched[key]) return; harborFetched[key]=true;
+  try{ const cached=JSON.parse(localStorage.getItem('pr_harbors_'+key)||'null'); if(cached){ addHarborPolys(cached); return; } }catch(_){}
+  const d=0.02,s=b.getSouth()-d,w=b.getWest()-d,n=b.getNorth()+d,e=b.getEast()+d, bb=s+','+w+','+n+','+e;
+  const q='[out:json][timeout:15];(way["leisure"="marina"]('+bb+');relation["leisure"="marina"]('+bb+');way["harbour"]('+bb+');way["landuse"="harbour"]('+bb+');way["waterway"="dock"]('+bb+'););out geom;';
+  try{ const r=await fetchTO('https://overpass-api.de/api/interpreter',20000,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
+    if(!r.ok) return; const j=await r.json(); const polys=[];
+    for(const el of (j.elements||[])){ if(el.geometry&&el.geometry.length>=3) polys.push(el.geometry.map(p=>[p.lat,p.lon]));
+      else if(el.members) for(const m of el.members){ if(m.geometry&&m.geometry.length>=3) polys.push(m.geometry.map(p=>[p.lat,p.lon])); } }
+    if(polys.length){ addHarborPolys(polys); try{ localStorage.setItem('pr_harbors_'+key,JSON.stringify(polys)); }catch(_){} }
+  }catch(_){}
+}
+// ---- ZONE PORTO MANUALI (100% affidabili, salvate in locale): dove OSM non mappa il porto, l'utente lo esclude a mano ----
+let noPorts=[]; try{ noPorts=JSON.parse(localStorage.getItem('pr_noports')||'[]'); }catch(_){ noPorts=[]; }
+const noPortLayer=L.layerGroup().addTo(map);
+function inNoFish(lat,lng){ if(inHarbor(lat,lng)) return true; for(const z of noPorts){ if(map.distance([lat,lng],[z.lat,z.lng])<=z.r) return true; } return false; }
+function renderNoPorts(){ noPortLayer.clearLayers(); noPorts.forEach((z,i)=>{
+  L.circle([z.lat,z.lng],{radius:z.r,color:'#ff4d4d',weight:1.4,fillColor:'#ff4d4d',fillOpacity:0.12,dashArray:'4,4'}).addTo(noPortLayer)
+   .bindPopup('&#128683; <b>Zona porto</b> &mdash; esclusa dai punti di pesca<br><a href="#" style="color:#ff9bb0" onclick="prDelPort('+i+');return false">rimuovi zona</a>'); }); }
+function refilterCanaloni(){ if(_lastCanal && $('lCanal') && $('lCanal').checked) markCanalMouths(_lastCanal.res,_lastCanal.dp,_lastCanal.W,_lastCanal.H,_lastCanal.b); }
+window.prAddPort=function(lat,lng){ noPorts.push({lat:+lat,lng:+lng,r:130}); localStorage.setItem('pr_noports',JSON.stringify(noPorts)); map.closePopup(); renderNoPorts(); refilterCanaloni();
+  $('info').style.display='block'; $('info').innerHTML='&#128683; <b>Zona porto esclusa</b> &middot; i punti di pesca qui vengono rimossi.<br><span class="sub">tocca la zona rossa per rimuoverla</span>'; setTimeout(()=>$('info').style.display='none',4000); };
+window.prDelPort=function(i){ noPorts.splice(i,1); localStorage.setItem('pr_noports',JSON.stringify(noPorts)); map.closePopup(); renderNoPorts(); refilterCanaloni(); };
+renderNoPorts();
 const canalIcon=L.divIcon({className:'',html:'<div class="canalpin">&#127744;</div>',iconSize:[26,26],iconAnchor:[13,13]});          // esterno (viola)
 const canalIconNear=L.divIcon({className:'',html:'<div class="canalpin near">&#127907;</div>',iconSize:[26,26],iconAnchor:[13,13]});  // sotto riva, a portata di lancio (verde)
 function drawCanaloni(){
@@ -780,8 +812,11 @@ function drawCanaloni(){
     im.data[i*4]=c[0]; im.data[i*4+1]=c[1]; im.data[i*4+2]=c[2]; im.data[i*4+3]=al; }
   ctx.putImageData(im,0,0);
   canalOverlay=L.imageOverlay(cv.toDataURL(),b,{opacity:0.8,interactive:false}).addTo(map);
+  _lastCanal={res,dp,W,H,b};
   markCanalMouths(res,dp,W,H,b);
   updLegend();
+  // riconosci i porti nell'area e, appena noti, rifiltra i canaloni (escludendo quelli nel porto)
+  ensureHarbors(b).then(()=>{ if($('lCanal')&&$('lCanal').checked && _lastCanal){ markCanalMouths(_lastCanal.res,_lastCanal.dp,_lastCanal.W,_lastCanal.H,_lastCanal.b); } }).catch(()=>{});
 }
 // Marca i canaloni per DISTANZA DALLA RIVA: "sotto riva" (a portata di lancio, <=140 m) vs "esterni".
 // Distanza calcolata dalla sola TERRAFERMA (componente NaN più grande), ignorando i falsi NaN in acqua.
@@ -828,7 +863,9 @@ function markCanalMouths(res,depth,W,H,b){
   // nuclei dei canali = minimi locali del rilievo
   const R=10, cand=[];
   for(let py=2;py<H-2;py++)for(let px=2;px<W-2;px++){ const i=py*W+px, r=res[i];
-    if(isNaN(r)||r>-0.18||!isFinite(depth[i])||dist[i]<1||wcomp[i]!==seaComp) continue; let isMin=true;
+    if(isNaN(r)||r>-0.18||!isFinite(depth[i])||dist[i]<1||wcomp[i]!==seaComp) continue;
+    if(harborPolys.length||noPorts.length){ const _la=N-(py/(H-1))*(N-S), _lo=Wd+(px/(W-1))*(E-Wd); if(inNoFish(_la,_lo)) continue; }   // dentro un porto: non pescabile
+    let isMin=true;
     for(let dy=-R;dy<=R&&isMin;dy++){ const yy=py+dy; if(yy<0||yy>=H)continue; const row=yy*W;
       for(let dx=-R;dx<=R;dx++){ const xx=px+dx; if(xx<0||xx>=W)continue; const rj=res[row+xx]; if(!isNaN(rj)&&rj<r){ isMin=false; break; } } }
     if(isMin) cand.push({i,r,dep:depth[i],dm:dist[i]*cellM}); }
@@ -837,7 +874,7 @@ function markCanalMouths(res,depth,W,H,b){
   near.forEach(c=>c.near=true); far.forEach(c=>c.near=false);
   [...near,...far].forEach(cp=>{ const py=(cp.i/W)|0, px=cp.i-py*W, lat=N-(py/(H-1))*(N-S), lng=Wd+(px/(W-1))*(E-Wd);
     rulerSnappable(L.marker([lat,lng],{icon: cp.near?canalIconNear:canalIcon}).addTo(canalPins)
-     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m &middot; ~'+Math.round(cp.dm)+' m dalla riva'+(cp.near?' &middot; a portata di lancio':'')+'<br>&#128207; col righello attivo, tocca qui per agganciare B</span>')); });
+     .bindPopup((cp.near?'&#127907;':'&#127744;')+' <b>Canalone '+(cp.near?'sotto riva':'esterno')+'</b><br><span class="sub">~'+Math.abs(cp.dep).toFixed(1)+' m &middot; ~'+Math.round(cp.dm)+' m dalla riva'+(cp.near?' &middot; a portata di lancio':'')+'<br>&#128207; col righello attivo, tocca qui per agganciare B</span><br><button class="prDelBtn" style="border-color:#ff4d4d;color:#ffb3b3;background:#2a1414" onclick="prAddPort('+lat+','+lng+')">&#128683; qui &egrave; un porto (escludi)</button>')); });
 }
 $('lCanal').onchange=async()=>{
   if(!$('lCanal').checked){ drawCanaloni(); return; }
@@ -940,8 +977,11 @@ async function openMarkForm(ll){
   if(dep==null) dep=await depthAt(ll.lat,ll.lng).catch(()=>null);
   const hab=await habitatAt(ll.lat,ll.lng).catch(()=>null);
   pendingAuto.depth=dep; pendingAuto.fondale=hab;
+  try{ await ensureHarbors(map.getBounds()); }catch(_){}
+  const inH=inNoFish(ll.lat,ll.lng);
   $('mfAuto').innerHTML='<b>In automatico:</b> '+now.toLocaleString('it-IT')+'<br>'+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5)+
-    '<br>profondità: '+fmtDepth(dep)+' &middot; fondale: '+(hab||'—');
+    '<br>profondità: '+fmtDepth(dep)+' &middot; fondale: '+(hab||'—')+
+    (inH?'<br><b style="color:#ffb020">&#9888; dentro un porto</b> &mdash; di norma non pescabile':'');
 }
 function closeMark(){ $('markForm').style.display='none'; marking=false; $('btnMark').classList.remove('active'); map.getContainer().style.cursor=''; }
 $('mfSave').onclick=()=>{ if(!pendingAuto) return;
