@@ -92,33 +92,33 @@
     background:var(--card2);border-top:1px solid var(--bd);border-radius:20px 20px 0 0;
     padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 18px);box-shadow:0 -10px 36px #000c;max-height:52vh;overflow:auto}
   #layerSheet.on{transform:translateY(0)}
-  .grab{width:40px;height:4px;border-radius:2px;background:#3a5570;margin:6px auto 2px}
-  .sheetH{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card2);padding:8px 0 10px;z-index:2}
-  .sheetH b{color:var(--acc);font-size:16px}
-  #sheetClose{background:none;border:none;color:#cfe0f2;font-size:20px;cursor:pointer}
-  .seg{display:flex;gap:6px;margin:2px 0 6px}
-  .seg label{flex:1;text-align:center;padding:11px;border-radius:12px;border:1px solid #23415f;background:#0c2033;color:#cfe0f2;font-size:13px;font-weight:600;cursor:pointer}
-  .seg label:has(input:checked){background:var(--acc);color:#04121e;border-color:var(--acc)}
+  .grab{width:36px;height:4px;border-radius:2px;background:#2b4056;margin:9px auto 4px}
+  .sheetH{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card2);padding:6px 0 12px;z-index:2}
+  .sheetH b{color:var(--ink);font-size:15px;font-weight:600}
+  #sheetClose{background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer;line-height:1}
+  .seg{display:flex;gap:4px;margin:2px 0 4px;background:rgba(255,255,255,.04);border-radius:12px;padding:3px}
+  .seg label{flex:1;text-align:center;padding:9px;border-radius:9px;color:var(--mut);font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+  .seg label:has(input:checked){background:var(--acc);color:#04121e}
   .seg input{display:none}
-  .grpT{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--acc);margin:14px 2px 7px;font-weight:700}
-  .lgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .chip{display:flex;align-items:center;gap:9px;padding:12px 12px;border-radius:13px;border:1px solid #23415f;background:#0c2033;color:var(--ink);font-size:13px;font-weight:600;line-height:1.2;cursor:pointer}
+  .grpT{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin:16px 3px 8px;font-weight:600;opacity:.8}
+  .lgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chip{display:flex;align-items:center;padding:11px 13px;border-radius:11px;border:1px solid transparent;background:rgba(255,255,255,.045);color:var(--ink);font-size:13px;font-weight:500;line-height:1.2;cursor:pointer;transition:.12s}
   .chip input{display:none}
-  .chip .dot{width:10px;height:10px;border-radius:50%;background:#33506b;flex:0 0 auto;transition:.15s}
-  .chip:has(input:checked){border-color:var(--acc);background:#123a52}
-  .chip:has(input:checked) .dot{background:var(--grn);box-shadow:0 0 8px var(--grn)}
-  .chip.sub{color:var(--mut);font-weight:500}
-  .rng{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:12px;margin:9px 2px}
+  .chip:has(input:checked){border-color:var(--acc);background:rgba(22,224,255,.13);color:#eafcff;font-weight:600}
+  .chip.sub{color:var(--mut);font-size:12.5px}
+  .chip.sub:has(input:checked){color:#eafcff}
+  .rng{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12px;margin:10px 3px}
   .rng input[type=range]{flex:1;accent-color:var(--acc)}
-  .rng b{color:var(--acc);min-width:40px;text-align:right}
+  .rng b{color:var(--ink);min-width:40px;text-align:right;font-weight:600}
   #sdbDateRow{align-items:center}
-  #sdbDate{flex:1;background:#11243c;color:#fff;border:1px solid var(--bd);border-radius:8px;padding:7px;font-size:12px}
-  .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-  .act{padding:13px 10px;border-radius:12px;border:1px solid var(--bd);background:#11243c;color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;text-align:center}
-  .act.g{border-color:var(--grn);color:var(--grn)}
-  .act.y{border-color:#ffd54a;color:#ffd54a}
-  .guida{display:block;text-align:center;margin-top:14px;color:var(--acc);text-decoration:none;font-size:13px;border:1px solid var(--acc);border-radius:12px;padding:12px}
-  .classic{display:block;text-align:center;margin-top:8px;color:var(--mut);text-decoration:none;font-size:12px;border:1px solid #33506b;border-radius:12px;padding:11px}
+  #sdbDate{flex:1;background:rgba(255,255,255,.05);color:#fff;border:1px solid var(--bd);border-radius:9px;padding:8px;font-size:12px}
+  .acts{display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px}
+  .act{padding:12px 14px;border-radius:11px;border:1px solid transparent;background:rgba(255,255,255,.045);color:var(--ink);font-weight:600;font-size:13px;cursor:pointer;text-align:left;transition:.12s}
+  .act:active{background:rgba(22,224,255,.13)}
+  .foot2{display:flex;gap:8px;margin-top:16px}
+  .foot2 a{flex:1;text-align:center;text-decoration:none;font-size:12.5px;border-radius:11px;padding:11px;border:1px solid var(--bd)}
+  .foot2 a.g{color:var(--acc);border-color:rgba(22,224,255,.4)}
+  .foot2 a.c{color:var(--mut)}
   /* ---- popup + pin (identici all'originale: le divIcon del motore usano queste classi) ---- */
   .leaflet-popup-content-wrapper{background:#0e2034;color:#dfeaf5;border:1px solid #1f3650}
   .leaflet-popup-tip{background:#0e2034;border:1px solid #1f3650}
@@ -214,34 +214,32 @@
 
   <div class="grpT">Batimetria satellite</div>
   <div class="lgrid">
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lSdb"> Profondit&agrave; SDB 10&nbsp;m</label>
-    <label class="chip sub"><span class="dot"></span><input type="checkbox" id="lSdbComp"> Composito +preciso</label>
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lIso"> Linee batimetriche</label>
-    <label class="chip sub"><span class="dot"></span><input type="checkbox" id="lIsoFine"> Fitte 0,5&nbsp;m sottoriva</label>
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lCanal"> Canaloni / rip</label>
+    <label class="chip"><input type="checkbox" id="lSdb"> Profondit&agrave; SDB 10&nbsp;m</label>
+    <label class="chip sub"><input type="checkbox" id="lSdbComp"> Composito +preciso</label>
+    <label class="chip"><input type="checkbox" id="lIso"> Linee batimetriche</label>
+    <label class="chip sub"><input type="checkbox" id="lIsoFine"> Fitte 0,5&nbsp;m sottoriva</label>
+    <label class="chip"><input type="checkbox" id="lCanal"> Canaloni / rip</label>
   </div>
   <div class="rng" id="sdbDateRow" style="display:none"><span>Data</span><select id="sdbDate"></select></div>
   <div class="rng">Prof. <input type="range" id="ovSdb" min="0" max="100" value="70"><b id="ovSdbV">70%</b></div>
 
   <div class="grpT">Fondale &amp; carte</div>
   <div class="lgrid">
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lContours" checked> Isobate EMODnet</label>
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lSeamark"> Carta nautica</label>
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lSub"> Substrato</label>
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lPos"> Posidonia</label>
-    <label class="chip"><span class="dot"></span><input type="checkbox" id="lMarks" checked> I miei punti</label>
+    <label class="chip"><input type="checkbox" id="lContours" checked> Isobate EMODnet</label>
+    <label class="chip"><input type="checkbox" id="lSeamark"> Carta nautica</label>
+    <label class="chip"><input type="checkbox" id="lSub"> Substrato</label>
+    <label class="chip"><input type="checkbox" id="lPos"> Posidonia</label>
+    <label class="chip"><input type="checkbox" id="lMarks" checked> I miei punti</label>
   </div>
   <div class="rng">Habitat <input type="range" id="ovHab" min="0" max="100" value="70"><b id="ovHabV">70%</b></div>
 
   <div class="grpT">Strumenti</div>
   <div class="acts">
-    <button class="act" id="btnHome">&#127968; Imposta partenza</button>
-    <button class="act g" id="btnCalib">&#127919; Calibra profondit&agrave;</button>
-    <button class="act y" id="btnOffline">&#11015; Salva zona offline</button>
-    <button class="act" onclick="document.getElementById('btnPrey').click();closeSheet()">&#128031; Prede probabili</button>
+    <button class="act" id="btnHome">&#127968;&nbsp; Imposta partenza qui</button>
+    <button class="act" id="btnCalib">&#127919;&nbsp; Calibra profondit&agrave;</button>
+    <button class="act" id="btnOffline">&#11015;&nbsp; Salva zona offline</button>
   </div>
-  <a class="guida" href="guida.html">&#10067; Guida completa</a>
-  <a class="classic" href="index.html?desktop">&#128421;&#65039; Versione classica (PC)</a>
+  <div class="foot2"><a class="g" href="guida.html">&#10067; Guida</a><a class="c" href="index.html?desktop">&#128421;&#65039; Versione PC</a></div>
 </div>
 
 <!-- wiring del guscio Windy (i controlli sono nativi: qui solo apri/chiudi il pannello livelli) -->
