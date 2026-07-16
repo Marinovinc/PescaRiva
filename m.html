@@ -781,14 +781,25 @@ async function ensureHarbors(b){
 }
 // ---- ZONE PORTO MANUALI (100% affidabili, salvate in locale): dove OSM non mappa il porto, l'utente lo esclude a mano ----
 let noPorts=[]; try{ noPorts=JSON.parse(localStorage.getItem('pr_noports')||'[]'); }catch(_){ noPorts=[]; }
-const noPortLayer=L.layerGroup().addTo(map);
+let noPortR=Math.min(500,Math.max(40,+(localStorage.getItem('pr_noport_r')||130)));   // raggio predefinito (ultimo usato)
+const noPortLayer=L.layerGroup().addTo(map); let noPortCircles=[];
 function inNoFish(lat,lng){ if(inHarbor(lat,lng)) return true; for(const z of noPorts){ if(map.distance([lat,lng],[z.lat,z.lng])<=z.r) return true; } return false; }
-function renderNoPorts(){ noPortLayer.clearLayers(); noPorts.forEach((z,i)=>{
-  L.circle([z.lat,z.lng],{radius:z.r,color:'#ff4d4d',weight:1.4,fillColor:'#ff4d4d',fillOpacity:0.12,dashArray:'4,4'}).addTo(noPortLayer)
-   .bindPopup('&#128683; <b>Zona porto</b> &mdash; esclusa dai punti di pesca<br><a href="#" style="color:#ff9bb0" onclick="prDelPort('+i+');return false">rimuovi zona</a>'); }); }
+function renderNoPorts(){ noPortLayer.clearLayers(); noPortCircles=[]; noPorts.forEach((z,i)=>{
+  const circ=L.circle([z.lat,z.lng],{radius:z.r,color:'#ff4d4d',weight:1.4,fillColor:'#ff4d4d',fillOpacity:0.12,dashArray:'4,4'}).addTo(noPortLayer);
+  circ.bindPopup('&#128683; <b>Zona porto</b> &mdash; esclusa dai punti di pesca'+
+    '<br><div style="display:flex;align-items:center;gap:6px;margin:7px 0 4px"><span class="sub">Raggio</span>'+
+    '<input type="range" min="40" max="500" step="10" value="'+z.r+'" oninput="prSetPortR('+i+',this.value)" onchange="prCommitPort()" style="flex:1;accent-color:#ff6b6b">'+
+    '<b id="prR'+i+'" style="color:#ff9bb0;min-width:48px;text-align:right">'+z.r+'&nbsp;m</b></div>'+
+    '<a href="#" style="color:#ff9bb0" onclick="prDelPort('+i+');return false">rimuovi zona</a>');
+  noPortCircles.push(circ); }); }
 function refilterCanaloni(){ if(_lastCanal && $('lCanal') && $('lCanal').checked) markCanalMouths(_lastCanal.res,_lastCanal.dp,_lastCanal.W,_lastCanal.H,_lastCanal.b); }
-window.prAddPort=function(lat,lng){ noPorts.push({lat:+lat,lng:+lng,r:130}); localStorage.setItem('pr_noports',JSON.stringify(noPorts)); map.closePopup(); renderNoPorts(); refilterCanaloni();
-  $('info').style.display='block'; $('info').innerHTML='&#128683; <b>Zona porto esclusa</b> &middot; i punti di pesca qui vengono rimossi.<br><span class="sub">tocca la zona rossa per rimuoverla</span>'; setTimeout(()=>$('info').style.display='none',4000); };
+// Regolazione del raggio dal vivo: aggiorna cerchio + salva; i punti di pesca si rifiltrano al rilascio (prCommitPort)
+window.prSetPortR=function(i,r){ r=+r; if(!noPorts[i]) return; noPorts[i].r=r; noPortR=r;
+  if(noPortCircles[i]) noPortCircles[i].setRadius(r); const lab=document.getElementById('prR'+i); if(lab) lab.innerHTML=r+'&nbsp;m';
+  localStorage.setItem('pr_noports',JSON.stringify(noPorts)); localStorage.setItem('pr_noport_r',r); };
+window.prCommitPort=function(){ refilterCanaloni(); };
+window.prAddPort=function(lat,lng){ noPorts.push({lat:+lat,lng:+lng,r:noPortR}); localStorage.setItem('pr_noports',JSON.stringify(noPorts)); map.closePopup(); renderNoPorts(); refilterCanaloni();
+  $('info').style.display='block'; $('info').innerHTML='&#128683; <b>Zona porto esclusa</b> &middot; i punti di pesca qui vengono rimossi.<br><span class="sub">tocca la zona rossa per regolare il <b>raggio</b> o rimuoverla</span>'; setTimeout(()=>$('info').style.display='none',5000); };
 window.prDelPort=function(i){ noPorts.splice(i,1); localStorage.setItem('pr_noports',JSON.stringify(noPorts)); map.closePopup(); renderNoPorts(); refilterCanaloni(); };
 renderNoPorts();
 const canalIcon=L.divIcon({className:'',html:'<div class="canalpin">&#127744;</div>',iconSize:[26,26],iconAnchor:[13,13]});          // esterno (viola)
