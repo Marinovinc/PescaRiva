@@ -1,7 +1,7 @@
 // PescaRiva service worker: precache del guscio app (offline il guscio), CDN cache-first.
 // I DATI (Sentinel-2 COG, STAC, EMODnet WMS/WCS, tile mappa) passano sempre alla rete: sono live/grandi, non vanno in cache.
-const CACHE = 'pescariva-v7';
-const ASSETS = ['./', './index.html', './m.html', './guida.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
+const CACHE = 'pescariva-v8';
+const ASSETS = ['./', './index.html', './m.html', './engine.js', './guida.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './guida-01-overview.png', './guida-03-cattura.png', './guida-04-gps.png', './guida-05-sdb.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
