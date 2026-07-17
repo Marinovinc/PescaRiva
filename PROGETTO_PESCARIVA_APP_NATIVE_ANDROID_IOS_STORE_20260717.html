@@ -252,6 +252,65 @@
 
   <div class="note">🧰 <b>Stack consigliato (serverless, piano gratuito iniziale):</b> una piccola <b>License function</b> su Cloudflare Workers (o Supabase / Firebase) + un <b>DB codici</b> (KV/SQL). <b>Nessuno storage di mappe da gestire</b> — i dati arrivano dai portali. Costi minimi, niente server da mantenere. Si trasmettono solo un codice e un UUID casuale.</div>
 
+  <!-- 3C. MONETIZZAZIONE -->
+  <h2><span class="k" style="background:var(--warn);color:#04121e">€</span> Monetizzazione e prezzo</h2>
+  <p class="muted">Modello: <b>licenza stagionale 6 mesi</b>, fascia economica, incasso <b>ibrido</b>. L'app è <b>gratis da scaricare</b>; le funzioni si sbloccano con l'acquisto in-app <b>oppure</b> con un codice.</p>
+
+  <div class="showcase">
+    <div class="card hi" style="max-width:270px;text-align:center">
+      <div class="muted" style="font-size:13px">Licenza stagionale</div>
+      <div class="kpi" style="font-size:40px;line-height:1.1">€3,99</div>
+      <div class="muted">6 mesi · tutte le funzioni</div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
+      <div style="text-align:left;font-size:13px" class="muted">
+        ✓ Profondità SDB + isobate<br>
+        ✓ Canaloni · righello · profilo fondale<br>
+        ✓ Prede · catture · uso offline<br>
+        ✓ Aggiornamenti inclusi
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:12px">oppure <b>12 mesi €5,99</b> · prezzo tarabile dopo il lancio</div>
+    </div>
+    <ul class="callouts">
+      <li>🛒 <b>Acquisto in-app (IAP):</b> per l'utente normale, con i pagamenti dello store → <b>conforme</b> Apple/Google.</li>
+      <li>🎟️ <b>Codici del nostro server:</b> per regali, promo, beta e vendita diretta → nessuna commissione store.</li>
+      <li>📶 <b>Offline:</b> ricevuta e token restano in cache, con periodo di grazia.</li>
+      <li>🏷️ <b>Small Business Program</b> su entrambi gli store → commissione <b>15%</b> (non 30%).</li>
+    </ul>
+  </div>
+
+  <h3>Due modi per sbloccare (ibrido) → un solo entitlement</h3>
+  <div class="arch">
+    <div class="split">
+      <div class="plat"><div class="box cap"><b>🛒 Acquisto in-app</b><div class="s">IAP dello store · abbonamento 6 mesi</div></div><div class="rail-lbl">utente normale · conforme</div></div>
+      <div class="plat"><div class="box and"><b>🎟️ Codice</b><div class="s">regali · promo · beta · vendita diretta</div></div><div class="rail-lbl">canali esterni · no commissione</div></div>
+    </div>
+    <div class="arrow"></div>
+    <div class="box web" style="min-width:320px"><b>Entitlement (2 fonti)</b><div class="s">ricevuta IAP <b>oppure</b> token del codice · verificato e in cache <b>in locale</b> · offline con grazia</div></div>
+    <div class="arrow"></div>
+    <div class="box cap" style="min-width:auto"><b>✅ App sbloccata</b></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>🧮 Conti (indicativi, €3,99 · SBP 15%)</h4>
+      <ul>
+        <li>Netto ex-IVA ≈ <b>€3,27</b> → proventi IAP ≈ <b>€2,78</b>/vendita (con 30% ≈ €2,29)</li>
+        <li>Vendita diretta (Stripe): ≈ <b>€2,9-3,0</b> netti, ma gestisci tu IVA/fattura</li>
+        <li>Break-even costo Apple (≈€90/anno): ~<b>33-36 vendite/anno</b> via IAP</li>
+        <li>Google è una tantum (25$), già coperto</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>✅ Conformità store</h4>
+      <ul>
+        <li>Acquisto <b>solo</b> via IAP → ok regola Apple <b>3.1.1</b></li>
+        <li>Campo <b>"riscatta codice"</b> ammesso, ma <b>non</b> si vende/pubblicizza il codice in-app</li>
+        <li>La vendita dei codici avviene <b>fuori</b> dall'app (sito/di persona)</li>
+        <li>In più: <b>Apple Offer Codes</b> / <b>Google promo codes</b> per le promo</li>
+      </ul>
+    </div>
+  </div>
+
   <!-- 4. APPROCCI -->
   <h2><span class="k">4</span> Approcci a confronto</h2>
   <div class="grid g3">

@@ -334,7 +334,68 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 
 ---
 
-## 19. Riferimenti
+## 19. Monetizzazione e prezzo dei codici
+
+### 19.1 Modello scelto
+
+- **Licenza stagionale a 6 mesi** (fascia economica), con incasso **ibrido**:
+  - **Acquisto in-app (IAP)** tramite i pagamenti dello store per l'utente normale → **conforme** ad Apple e Google.
+  - **Codici del nostro server** (validi 6 mesi) per **regali, promo, closed beta e vendita diretta** → fuori dagli store, **nessuna commissione**.
+- L'app è **gratuita da scaricare**; l'accesso alle funzioni si sblocca con l'acquisto **oppure** con un codice.
+
+### 19.2 Prezzo
+
+- **6 mesi — €3,99** (prezzo di partenza consigliato, fascia economica).
+- *(Opzionale, come miglior valore)* **12 mesi — €5,99**.
+- Il prezzo è **tarabile** dopo un primo periodo (anche con A/B test o promo di lancio). Prezzi *psicologici* (x,99) e allineati alla stagione di pesca.
+
+### 19.3 Come si incassa (ibrido) — dettaglio
+
+**Canale A — Acquisto in-app (utente normale)**
+- Prodotto IAP **abbonamento auto-rinnovabile a 6 mesi** (consigliato: si rinnova da solo, l'utente può disdire; ricavo ricorrente). Alternativa: **non-rinnovabile** (l'utente ri-acquista a mano; più semplice ma più attrito).
+- Lo store gestisce pagamento, IVA e rinnovi. L'app riceve la **ricevuta/entitlement** e sblocca.
+
+**Canale B — Codici (regali / promo / beta / diretta)**
+- Il nostro server (license function, §18.2) genera codici a 6 mesi. L'utente li **riscatta** nell'app (campo "Hai un codice?").
+- Venduti su canali **esterni** (tuo sito con Stripe/PayPal, o consegnati a mano): nessuna commissione store, ma **gestisci tu IVA/fattura**.
+
+### 19.4 Come l'app decide se è sbloccata (entitlement da 2 fonti)
+
+- L'app considera l'accesso valido se **almeno una** di queste è attiva:
+  1. **Ricevuta IAP** dello store (abbonamento in corso), verificata via StoreKit / Play Billing;
+  2. **Token licenza** da codice riscattato (firmato dal nostro server, verificato in locale — §18.2).
+- **Offline:** entrambe le fonti sono in **cache** (la ricevuta dallo store, il token in locale) con **periodo di grazia**; l'app resta usabile senza rete.
+- Alla scadenza di entrambe → schermata di rinnovo/riscatto.
+
+### 19.5 Conformità agli store (importante)
+
+- L'**acquisto** avviene **solo** con l'IAP dello store → nessun problema con la regola Apple **3.1.1**.
+- Il **campo "riscatta codice"** è **ammesso**, ma in-app **non si vende né si pubblicizza** l'acquisto del codice esterno (niente link/prezzi verso il sito): questo tiene l'app conforme. La vendita dei codici avviene fuori dall'app.
+- In alternativa/aggiunta si possono usare i sistemi nativi: **Apple Offer Codes** e **Google Play promo codes** (per sconti/promo gestiti dagli store).
+- **Small Business Program**: iscriversi su **entrambi** gli store → commissione **15%** (anziché 30%) finché il fatturato è sotto la soglia (≈ 1 M$/anno).
+
+### 19.6 Economia (stima onesta, indicativa)
+
+Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)**.
+- Netto ex-IVA ≈ €3,27; **proventi ≈ €2,78** per vendita IAP (con 30% sarebbero ≈ €2,29).
+- Vendita **diretta** con Stripe: ≈ €3,99 − commissioni (~1,5% + €0,25) − IVA da versare ≈ **€2,9–3,0** netti, ma con gestione fiscale a tuo carico.
+- **Break-even costo Apple** (99 $/anno ≈ €90): servono ~**33-36 vendite/anno** via IAP con SBP. Google è una tantum (25 $), già coperto.
+- Conclusione: bastano poche decine di vendite l'anno per coprire i costi; il resto è margine.
+
+### 19.7 Checklist monetizzazione
+
+- [ ] Configurare il prodotto IAP **abbonamento 6 mesi** su App Store Connect e Google Play (prezzo €3,99).
+- [ ] *(Opzionale)* SKU **12 mesi €5,99**.
+- [ ] Iscrizione **Small Business Program** su entrambi gli store (commissione 15%).
+- [ ] Integrare **StoreKit / Play Billing** (o un plugin Capacitor per gli acquisti) + verifica ricevuta.
+- [ ] Logica **entitlement a 2 fonti** (IAP OR codice) con cache offline e grazia.
+- [ ] Schermata **paywall**: "Sblocca 6 mesi €3,99" + "Hai un codice?" (senza vendere il codice in-app).
+- [ ] Canale di **vendita diretta codici** (sito + Stripe) con gestione IVA/fattura.
+- [ ] *(Opzionale)* Apple Offer Codes / Google promo codes per le promozioni.
+
+---
+
+## 20. Riferimenti
 
 - Repo e sito: `github.com/Marinovinc/PescaRiva` — `https://marinovinc.github.io/PescaRiva/`
 - Capacitor (guscio nativo cross-platform), PWABuilder (packaging PWA→store), Bubblewrap/TWA (Android).
