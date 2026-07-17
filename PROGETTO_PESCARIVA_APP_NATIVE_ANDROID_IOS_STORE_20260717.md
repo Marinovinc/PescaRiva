@@ -270,6 +270,8 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 **Amministrazione**
 - Un modo semplice per **generare** e **revocare** codici: uno script CLI o una mini-pagina admin protetta. I codici possono avere scadenza e numero massimo di attivazioni.
 
+> **Prototipo funzionante già sviluppato:** `access.html` (in repo → `https://marinovinc.github.io/PescaRiva/access.html`). Contiene le 3 viste navigabili (acquisto / attivazione codice / sbloccato), il **riscatto codice** client-side con abilitazione salvata in `localStorage` (`pr_license`, scadenza 6 mesi) e la simulazione di sblocco. **Da sostituire** con: chiamata reale alla *license function* (validazione + token firmato) e **IAP** dello store per l'acquisto. Il **gate** che mostra questa schermata all'avvio dell'app **non è ancora attivato** (per non bloccare l'app live): si aggancia quando il backend è pronto.
+
 ### 18.3 Funzionamento autonomo sul dispositivo (mappe + batimetria on-device)
 
 > **Niente pacchi pre-elaborati, niente download di mappe dal nostro server.** L'app è autonoma come l'attuale PWA.
