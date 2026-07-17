@@ -460,6 +460,12 @@ Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)
 
 - Kit grafico coerente per tutte le app (logo suite + logo per app), template screenshot store, brevi **video demo**.
 
+### 21.4 Struttura del sito (mappa pagine)
+
+- **Home** (suite) · **Pagina per app** · **Download** (link store) · **Guida** · **Privacy** · **Acquista codice** (Stripe) · **Blog/News** · **FAQ** · **Contatti**.
+- **Flusso vendita codice:** checkout Stripe → codice via email → **riscatto nell'app**. (La vendita vive sul sito, non in-app.)
+- Multilingua **IT/EN**, analytics **privacy-friendly**, collegamento a Facebook. Hosting statico (GitHub Pages o dominio proprio).
+
 ---
 
 ## 22. Multilingua (autoconfigurazione della lingua)
@@ -489,7 +495,59 @@ Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)
 
 ---
 
-## 23. Riferimenti
+## 23. Roadmap e MVP
+
+### 23.1 MVP — cosa entra nella v1.0 (store)
+
+- L'**app mare attuale** (tutte le funzioni odierne) impacchettata con **Capacitor**.
+- **Paywall:** abbonamento IAP (lancio 6 mesi €3,99, poi €1/mese o €10/anno) + **riscatto codice**.
+- **Multilingua base:** IT + EN, autoconfigurazione.
+- **Librerie in locale** (vendoring), **icone**, **splash**, **privacy policy**, **schede store**.
+- Rilascio **Android per primo**, poi **iOS**.
+- *Fuori dall'MVP (dopo):* funzioni premium, altre lingue, gestione cache avanzata, app sorelle.
+
+### 23.2 Incrementi post-lancio (proposta)
+
+- **v1.1** — primo blocco **funzioni premium** + lingue **DE/FR/ES**.
+- **v1.2** — gestione **cache/offline avanzata**, esportazione catture, statistiche.
+- **v1.3** — **sync catture** (cloud opzionale) tra dispositivi.
+- **v2.0** — **App 2: Laghi e fiumi**.
+- **v2.x** — **App 3: Barca** (drifting, traina d'altura).
+- **v3.0** — **bundle suite** + codici multi-app.
+
+### 23.3 Criterio
+
+- Rilasciare **presto** un MVP solido (mare), poi **iterare** con funzioni premium e nuove app **riusando il motore** condiviso.
+
+---
+
+## 24. Funzioni premium (dettaglio)
+
+### 24.1 Base (incluse nell'abbonamento)
+
+Mappa satellitare/OSM, **profondità SDB + isobate**, **canaloni**, tocco profondità/fondo, **GPS**, **righello + profilo**, **prede probabili**, **catture/spot** locali, **riconoscimento porti**, **uso offline** (cache automatica), calibrazione base.
+
+### 24.2 Premium (a pagamento aggiuntivo, nel tempo)
+
+Candidate (da confermare e prioritizzare):
+- **Meteo-marino integrato** (vento, onde, marea), stile Windy.
+- **Solunar** / finestre di attività dei pesci.
+- **Layer avanzati:** correnti, SST, **clorofilla** (integrazione con le altre app/progetti della suite).
+- **Esportazione catture** GPX/CSV + **statistiche** avanzate.
+- **Sync cloud** catture/spot tra dispositivi e tra app della suite.
+- **Cache offline estesa** / più zone.
+- **Composito multi-data avanzato**, calibrazione avanzata.
+
+> Principio: il Premium deve essere **valore aggiunto reale**, senza tagliare le funzioni base attuali.
+
+### 24.3 Come si vende il Premium
+
+- **Tier superiore** dell'abbonamento, oppure **add-on IAP** (sblocco non-consumabile).
+- I **codici** possono concedere accesso **Base** o **Premium**.
+
+---
+
+## 25. Riferimenti
 
 - Repo e sito: `github.com/Marinovinc/PescaRiva` — `https://marinovinc.github.io/PescaRiva/`
 - Capacitor (guscio nativo cross-platform), PWABuilder (packaging PWA→store), Bubblewrap/TWA (Android).

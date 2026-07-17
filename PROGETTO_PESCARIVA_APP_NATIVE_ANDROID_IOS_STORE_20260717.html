@@ -339,6 +339,46 @@
     <div class="card"><h4>Da pianificare</h4><p class="muted">L'app oggi è tutta in italiano: la prima localizzazione richiede di <b>estrarre le stringhe</b> in un dizionario e tradurle — lavoro una tantum, poi riusato da tutta la suite. Anche le <b>schede store</b> vanno tradotte.</p></div>
   </div>
 
+  <!-- 3G. ROADMAP -->
+  <h2><span class="k" style="background:var(--grn);color:#04121e">↗</span> Roadmap e MVP</h2>
+  <p class="muted"><b>MVP v1.0</b>: l'app mare attuale + Capacitor + paywall (IAP + codice) + IT/EN + privacy/schede store. <b>Android per primo</b>, poi iOS. Poi si itera.</p>
+  <div class="steps">
+    <div class="stp"><div class="num">1</div><div class="body"><b>v1.0 — MVP mare</b> <span class="s">app attuale impacchettata, paywall, IT/EN, store</span></div></div>
+    <div class="stp"><div class="num">2</div><div class="body"><b>v1.1 — Premium + lingue</b> <span class="s">primo blocco funzioni premium · DE/FR/ES</span></div></div>
+    <div class="stp"><div class="num">3</div><div class="body"><b>v1.2 — Offline avanzato</b> <span class="s">gestione cache, esportazione catture, statistiche</span></div></div>
+    <div class="stp"><div class="num">4</div><div class="body"><b>v1.3 — Sync cloud</b> <span class="s">catture/spot tra dispositivi (opzionale)</span></div></div>
+    <div class="stp"><div class="num">5</div><div class="body"><b>v2.0 — App Laghi e fiumi</b> <span class="s">seconda app della suite, stesso motore</span></div></div>
+    <div class="stp"><div class="num">6</div><div class="body"><b>v2.x → v3.0 — Barca + bundle</b> <span class="s">drifting/traina d'altura, poi bundle suite + codici multi-app</span></div></div>
+  </div>
+
+  <!-- 3H. PREMIUM -->
+  <h2><span class="k" style="background:var(--warn);color:#04121e">★</span> Funzioni: Base vs Premium</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4>✅ Base <span class="muted" style="font-weight:400">(incluse nell'abbonamento)</span></h4>
+      <div class="pillrow">
+        <span class="p">Profondità SDB + isobate</span><span class="p">Canaloni</span><span class="p">Righello + profilo</span>
+        <span class="p">Prede</span><span class="p">GPS</span><span class="p">Catture/spot</span><span class="p">Porti</span><span class="p">Offline</span>
+      </div>
+    </div>
+    <div class="card hi">
+      <h4>★ Premium <span class="muted" style="font-weight:400">(a pagamento, nel tempo)</span></h4>
+      <div class="pillrow">
+        <span class="p">🌬️ Meteo-marino (vento/onde/marea)</span><span class="p">🌙 Solunar</span><span class="p">🌊 Correnti · SST · clorofilla</span>
+        <span class="p">📤 Export GPX/CSV + statistiche</span><span class="p">☁️ Sync tra dispositivi/suite</span><span class="p">🗺️ Cache estesa</span>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-top:8px">Principio: valore aggiunto reale, senza tagliare le funzioni base attuali. Venduto come tier superiore o add-on IAP; i codici possono dare Base o Premium.</p>
+    </div>
+  </div>
+
+  <!-- 3I. SITO -->
+  <h2><span class="k" style="background:#1877f2;color:#fff">▤</span> Struttura del sito</h2>
+  <div class="pillrow">
+    <span class="p">🏠 Home (suite)</span><span class="p">📱 Pagina per app</span><span class="p">⬇️ Download (store)</span><span class="p">❓ Guida</span>
+    <span class="p">🔒 Privacy</span><span class="p">🎟️ Acquista codice (Stripe)</span><span class="p">📰 Blog/News</span><span class="p">💬 FAQ · Contatti</span>
+  </div>
+  <div class="note">🛒 <b>Flusso vendita codice:</b> checkout Stripe → codice via email → <b>riscatto nell'app</b>. Multilingua IT/EN, analytics privacy-friendly, link a Facebook. Hosting statico (GitHub Pages o dominio proprio).</div>
+
   <!-- 4. APPROCCI -->
   <h2><span class="k">4</span> Approcci a confronto</h2>
   <div class="grid g3">
