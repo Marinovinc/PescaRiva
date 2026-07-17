@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progetto PescaRiva — App native Android &amp; iOS</title>
+<style>
+  :root{
+    --bg:#06121f;--bg2:#081a2c;--card:#0e2033;--card2:#122a42;--line:#1f3650;
+    --cy:#16e0ff;--grn:#8dff3a;--ink:#dfeaf5;--sub:#8fb0cc;--warn:#ffd54a;--red:#ff6b6b;
+    --and:#3ddc84;--ios:#dfe6ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 40%,var(--bg));color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:0 0 70px}
+  a{color:var(--cy)}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  header.hero{background:radial-gradient(1200px 400px at 70% -50%,rgba(22,224,255,.18),transparent),linear-gradient(120deg,#0c2c3d,#0a2130);
+    border-bottom:1px solid var(--cy);padding:38px 0 30px}
+  .hero h1{margin:0 0 6px;font-size:30px;letter-spacing:.3px}
+  .hero .sub{color:var(--sub);font-size:15px}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .badge{font-size:12.5px;padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--sub)}
+  .badge b{color:var(--cy)}
+  h2{font-size:21px;margin:38px 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .k{width:26px;height:26px;flex:0 0 26px;border-radius:8px;background:var(--cy);color:#04121e;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  h3{font-size:16px;margin:20px 0 8px;color:var(--cy)}
+  p{margin:8px 0}
+  .muted{color:var(--sub)}
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:820px){.g4,.g3,.g2{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 17px}
+  .card.hi{border-color:var(--cy);box-shadow:0 0 0 1px rgba(22,224,255,.25),0 8px 30px rgba(0,0,0,.35)}
+  .card h4{margin:0 0 6px;font-size:15px}
+  .kpi{font-size:24px;font-weight:800;color:var(--cy)}
+  .kpi.small{font-size:18px}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;margin-left:6px}
+  .tag.rec{background:rgba(141,255,58,.16);color:var(--grn);border:1px solid var(--grn)}
+  ul{margin:8px 0;padding-left:20px}li{margin:5px 0}
+  .pro{color:#bfe9c8}.con{color:#f0c4c4}
+  .note{border-left:3px solid var(--cy);background:#0f2740;border-radius:8px;padding:10px 14px;margin:12px 0;font-size:14.5px}
+  .warnbox{border-left:3px solid var(--warn);background:#2a2413;border-radius:8px;padding:10px 14px;margin:12px 0;font-size:14.5px;color:#eadfb4}
+
+  /* ===== MOCKUP: telefono con l'app ===== */
+  .showcase{display:flex;gap:26px;align-items:center;flex-wrap:wrap;justify-content:center;margin:14px 0}
+  .phone{position:relative;width:250px;height:520px;background:#02080e;border:9px solid #10202e;border-radius:34px;
+    box-shadow:0 18px 50px rgba(0,0,0,.5), inset 0 0 0 1px #24425c;overflow:hidden;flex:0 0 auto}
+  .phone .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:110px;height:20px;background:#02080e;border-radius:0 0 14px 14px;z-index:6}
+  .scr{position:absolute;inset:0;background:
+     radial-gradient(120px 90px at 30% 26%, #2b6a54, transparent),
+     radial-gradient(150px 120px at 66% 44%, #1a4d63, transparent),
+     linear-gradient(160deg,#0a3a4a,#072436 70%)}
+  .scr::after{content:"";position:absolute;left:14%;top:8%;width:56%;height:52%;
+     background:linear-gradient(140deg,#c8b98a 0%,#9fb08a 30%,transparent 55%);opacity:.5;border-radius:40% 60% 55% 45%}
+  .m-pill{position:absolute;top:30px;left:12px;right:56px;height:34px;background:rgba(10,22,38,.92);border:1px solid var(--line);
+     border-radius:20px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;color:var(--cy);font-weight:800;z-index:5}
+  .m-pill .s{color:var(--sub);font-weight:400}
+  .m-ico{position:absolute;top:30px;width:34px;height:34px;border-radius:50%;background:rgba(10,22,38,.92);border:1px solid var(--line);
+     display:flex;align-items:center;justify-content:center;color:var(--cy);font-weight:800;z-index:5}
+  .m-rail{position:absolute;right:10px;top:120px;display:flex;flex-direction:column;gap:9px;z-index:5}
+  .m-rail div{width:42px;height:42px;border-radius:13px;background:rgba(10,22,38,.92);border:1px solid var(--line);
+     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;gap:1px}
+  .m-rail div span{font-size:7px;color:var(--sub)}
+  .m-rail div.on{background:#123a52;border-color:var(--cy);box-shadow:0 0 0 2px rgba(22,224,255,.4)}
+  .m-sheet{position:absolute;left:0;right:0;bottom:0;background:rgba(14,28,46,.98);border-top:1px solid var(--line);
+     border-radius:16px 16px 0 0;padding:8px 12px 14px;z-index:6;box-shadow:0 -8px 24px #000a}
+  .m-sheet .h{display:flex;justify-content:space-between;font-size:12px;color:var(--ink);font-weight:700;margin-bottom:8px}
+  .m-seg{display:flex;gap:3px;background:rgba(255,255,255,.05);border-radius:8px;padding:2px;margin-bottom:8px}
+  .m-seg span{flex:1;text-align:center;font-size:10px;padding:5px;border-radius:6px;color:var(--sub)}
+  .m-seg span.on{background:var(--cy);color:#04121e;font-weight:700}
+  .m-chips{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .m-chips label{display:flex;align-items:center;gap:5px;font-size:10px;padding:6px 7px;border-radius:7px;border:1px solid #223a52;color:var(--sub)}
+  .m-chips label i{width:6px;height:6px;border-radius:50%;background:#33506b}
+  .m-chips label.on{border-color:var(--cy);background:rgba(22,224,255,.12);color:#eafcff}
+  .m-chips label.on i{background:var(--cy);box-shadow:0 0 5px var(--cy)}
+  .callouts{max-width:280px}
+  .callouts li{margin:10px 0;list-style:none}
+  .callouts li b{color:var(--cy)}
+  .callouts{padding-left:0}
+
+  /* ===== Diagramma architettura ===== */
+  .arch{display:flex;flex-direction:column;align-items:center;gap:0;margin:16px 0}
+  .box{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:12px 16px;text-align:center;font-size:14px;min-width:220px}
+  .box b{color:var(--cy)} .box .s{color:var(--sub);font-size:12px}
+  .box.web{border-color:var(--cy)}
+  .box.cap{border-color:var(--grn);background:#12281c}
+  .box.cap b{color:var(--grn)}
+  .arrow{width:2px;height:22px;background:linear-gradient(var(--cy),transparent);position:relative}
+  .arrow::after{content:"▼";position:absolute;left:-6px;bottom:-4px;color:var(--cy);font-size:11px}
+  .split{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;width:100%}
+  .rail-lbl{font-size:11px;color:var(--sub);margin:2px 0}
+  .plat{flex:1 1 260px;max-width:320px;display:flex;flex-direction:column;align-items:center}
+  .box.and{border-color:var(--and)} .box.and b{color:var(--and)}
+  .box.store{background:#0c1c2e}
+
+  /* ===== Stepper fasi ===== */
+  .steps{display:flex;flex-direction:column;gap:0;margin:10px 0}
+  .stp{display:flex;gap:14px;align-items:flex-start;padding:0 0 4px}
+  .stp .num{flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:var(--card2);border:1px solid var(--cy);color:var(--cy);
+     font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:2}
+  .stp .line{position:relative}
+  .stp .body{padding-bottom:16px}
+  .stp .body b{font-size:15px}
+  .stp .body .s{color:var(--sub);font-size:13.5px}
+  .stp:not(:last-child) .num{box-shadow:0 34px 0 -14px var(--line)}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:#0f2740;color:var(--cy);font-size:13px}
+  .sev{font-weight:700}.sev.a{color:var(--red)}.sev.m{color:var(--warn)}.sev.b{color:var(--grn)}
+  .foot{color:#6f8aa6;font-size:12.5px;text-align:center;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+  .pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .pillrow .p{font-size:12.5px;border:1px solid var(--line);border-radius:20px;padding:5px 11px;color:var(--sub)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>🎣 PescaRiva → App native</h1>
+    <div class="sub">Portare la PWA su <b>Google Play</b> (Android) e <b>App Store</b> (iPhone) — piano di progetto illustrato</div>
+    <div class="badges">
+      <span class="badge">Versione <b>1.0</b></span>
+      <span class="badge">17 luglio 2026</span>
+      <span class="badge">Autore <b>Marinovinc</b></span>
+      <span class="badge">Stato: <b>bozza da approvare</b></span>
+      <span class="badge">Nessun codice modificato</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. SOMMARIO -->
+  <h2><span class="k">1</span> In breve</h2>
+  <div class="grid g4">
+    <div class="card"><h4>🎯 Obiettivo</h4><p class="muted">Un'app scaricabile su <b>Play</b> e <b>App Store</b>, senza riscrivere il codice.</p></div>
+    <div class="card hi"><h4>🧩 Come <span class="tag rec">consigliato</span></h4><p class="muted"><b>Capacitor</b>: un solo codice → due app native.</p></div>
+    <div class="card"><h4>💶 Costi</h4><p><span class="kpi small">25&nbsp;USD</span> Google (una tantum)<br><span class="kpi small">99&nbsp;USD/anno</span> Apple</p></div>
+    <div class="card"><h4>⏱️ Tempi</h4><p class="muted"><b>2-4 giorni</b> di lavoro tecnico · <b>1-2 settimane</b> con le review store</p></div>
+  </div>
+  <div class="warnbox">⚠️ <b>Rischio onesto:</b> Apple può rifiutare app che sembrano "solo un sito" (regola <b>4.2</b>). PescaRiva ha buone difese (GPS, mappe offline, batimetria, log catture) ma va presentata valorizzando le funzioni native. Android è invece semplice ed economico.</div>
+
+  <!-- 2. STATO ATTUALE + MOCKUP -->
+  <h2><span class="k">2</span> Stato attuale — cosa impacchettiamo</h2>
+  <p class="muted">Oggi PescaRiva è una <b>PWA</b> (HTML+CSS+JS, Leaflet) servita da GitHub Pages. Il motore è un unico file <b>engine.js</b> condiviso da <b>index.html</b> (PC) e <b>m.html</b> (mobile). È questa la base che diventa app.</p>
+  <div class="showcase">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="scr">
+        <div class="m-pill">PescaRiva <span class="s">🔍 località…</span></div>
+        <div class="m-ico" style="right:12px">?</div>
+        <div class="m-rail">
+          <div class="on">🎚️<span>Livelli</span></div>
+          <div>📍<span>GPS</span></div>
+          <div class="on">📏<span>Righello</span></div>
+          <div>🎣<span>Segna</span></div>
+          <div>🐟<span>Prede</span></div>
+        </div>
+        <div class="m-sheet">
+          <div class="h"><span>Livelli</span><span>✕</span></div>
+          <div class="m-seg"><span class="on">🛰️ Satellitare</span><span>🗺️ Mappa</span></div>
+          <div class="m-chips">
+            <label class="on"><i></i>Profondità SDB</label>
+            <label><i></i>Composito</label>
+            <label class="on"><i></i>Canaloni</label>
+            <label><i></i>Fitte 0,5 m</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="callouts">
+      <li>🛰️ <b>Batimetria satellite</b> (SDB Sentinel-2): profondità e isobate del sottocosta.</li>
+      <li>📏 <b>Righello di lancio</b> con profilo del fondale e aggancio ai canaloni.</li>
+      <li>📍 <b>GPS</b> "sei qui" + 🎣 <b>log catture</b> salvato solo sul telefono.</li>
+      <li>📶 <b>Offline</b>: mappe e ultima profondità restano in cache.</li>
+      <li>🚫 <b>Riconoscimento porti</b> (auto + zone manuali).</li>
+    </ul>
+  </div>
+  <div class="note">Prima del packaging: <b>portare in locale</b> le librerie oggi caricate da CDN (Leaflet, geotiff, proj4) per un'app davvero offline e senza dipendenze esterne all'avvio.</div>
+
+  <!-- 3. ARCHITETTURA -->
+  <h2><span class="k">3</span> Architettura scelta (Capacitor)</h2>
+  <p class="muted">Un unico contenuto web viene "avvolto" da Capacitor, che genera due progetti nativi. Gli stessi file, due store.</p>
+  <div class="arch">
+    <div class="box web"><b>File web dell'app</b><div class="s">m.html · engine.js · assets · icone</div></div>
+    <div class="arrow"></div>
+    <div class="box cap"><b>Capacitor</b><div class="s">guscio nativo + plugin (GPS, Splash, StatusBar, Filesystem)</div></div>
+    <div class="arrow"></div>
+    <div class="split">
+      <div class="plat">
+        <div class="box and"><b>Android Studio</b><div class="s">build → AAB firmato</div></div>
+        <div class="arrow"></div>
+        <div class="box and store"><b>▶ Google Play</b><div class="s">25 USD una tantum · anche da Windows</div></div>
+      </div>
+      <div class="plat">
+        <div class="box"><b>Xcode</b> <span class="muted">(richiede Mac)</span><div class="s">build → IPA firmato</div></div>
+        <div class="arrow"></div>
+        <div class="box store"><b> App Store</b><div class="s">99 USD/anno · review Apple</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. APPROCCI -->
+  <h2><span class="k">4</span> Approcci a confronto</h2>
+  <div class="grid g3">
+    <div class="card hi">
+      <h4>A · Capacitor <span class="tag rec">consigliato</span></h4>
+      <p class="muted">Un progetto per Android + iOS, stessi file web, plugin nativi.</p>
+      <ul><li class="pro">+ un solo codice, due app</li><li class="pro">+ plugin nativi, aggiornabile</li><li class="pro">+ rafforza il caso anti-4.2</li><li class="con">– serve Node + Android Studio (+ Xcode su Mac)</li></ul>
+    </div>
+    <div class="card">
+      <h4>B · PWABuilder</h4>
+      <p class="muted">Genera in automatico i pacchetti dai metadati della PWA.</p>
+      <ul><li class="pro">+ velocissimo</li><li class="pro">+ Android TWA (motore Chrome)</li><li class="con">– meno controllo</li><li class="con">– iOS più esposto al rifiuto 4.2</li></ul>
+    </div>
+    <div class="card">
+      <h4>C · TWA + Capacitor</h4>
+      <p class="muted">Android nativo TWA, iOS con Capacitor.</p>
+      <ul><li class="pro">+ miglior resa Android</li><li class="con">– due toolchain da mantenere</li></ul>
+    </div>
+  </div>
+
+  <!-- 5. STORE -->
+  <h2><span class="k">5</span> Requisiti dei due store</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="color:var(--and)">🤖 Google Play</h4>
+      <ul>
+        <li>Account Play Console (25 USD una tantum)</li>
+        <li>Application ID univoco (es. <b>it.pescariva.app</b>)</li>
+        <li>Chiave di firma (Play App Signing)</li>
+        <li>Target API level aggiornato</li>
+        <li><b>Data safety</b>: nessun dato raccolto</li>
+        <li>Content rating (PEGI 3)</li>
+        <li>Icona 512, <b>feature graphic 1024×500</b>, screenshot</li>
+        <li>Privacy policy URL</li>
+        <li>Upload <b>AAB</b> firmato (test → produzione)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--ios)"> App Store</h4>
+      <ul>
+        <li>Apple Developer Program (99 USD/anno)</li>
+        <li>Bundle ID (es. <b>it.pescariva.app</b>) + firma via Xcode</li>
+        <li>Stringa uso posizione (<b>NSLocationWhenInUse…</b>)</li>
+        <li><b>Privacy labels</b>: "Data Not Collected"</li>
+        <li>Icona 1024, screenshot nelle taglie richieste</li>
+        <li><b>Attenzione regola 4.2</b> (no "solo sito")</li>
+        <li>Invio review + gestione rilievi</li>
+        <li>Serve un <b>Mac</b> (o cloud-Mac) per compilare</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 6. PRIVACY -->
+  <h2><span class="k">6</span> Privacy — un punto di forza</h2>
+  <div class="card">
+    <p>PescaRiva è <b>privacy-friendly</b>, e questo semplifica entrambi gli store:</p>
+    <div class="pillrow">
+      <span class="p">🚫 Nessun server proprio</span>
+      <span class="p">🚫 Nessun dato personale raccolto</span>
+      <span class="p">📱 Catture/località solo sul dispositivo</span>
+      <span class="p">📍 GPS non lascia il telefono</span>
+    </div>
+    <p class="muted">Si contattano servizi cartografici di terze parti (Esri, OSM, EMODnet, Copernicus/Sentinel, Overpass) <b>solo</b> per scaricare mappe/dati. Serve pubblicare una <b>privacy policy</b> (una pagina sul sito attuale) e linkarla nei due store.</p>
+  </div>
+
+  <!-- 7. FASI -->
+  <h2><span class="k">7</span> Piano a fasi</h2>
+  <div class="steps">
+    <div class="stp"><div class="num">0</div><div class="body"><b>Decisioni</b> <span class="s">— confermare approccio, Mac, account, bundle id, nome/categoria (vedi §9)</span></div></div>
+    <div class="stp"><div class="num">1</div><div class="body"><b>Preparazione web</b> <span class="s">— vendoring librerie in locale, icone, splash, privacy policy, verifica offline</span></div></div>
+    <div class="stp"><div class="num">2</div><div class="body"><b>Android (Capacitor)</b> <span class="s">— init progetto, plugin, build AAB firmato, test su dispositivo</span></div></div>
+    <div class="stp"><div class="num">3</div><div class="body"><b>Store Android</b> <span class="s">— listing, asset, data safety, upload test → produzione</span></div></div>
+    <div class="stp"><div class="num">4</div><div class="body"><b>iOS (Capacitor, su Mac)</b> <span class="s">— progetto Xcode, permessi, splash, build, test iPhone</span></div></div>
+    <div class="stp"><div class="num">5</div><div class="body"><b>Store iOS</b> <span class="s">— App Store Connect, privacy labels, screenshot, invio review</span></div></div>
+    <div class="stp"><div class="num">6</div><div class="body"><b>Post-lancio</b> <span class="s">— recensioni/crash; aggiornamenti (modifica web → rebuild → nuova versione)</span></div></div>
+  </div>
+  <div class="note">💡 <b>Consiglio di percorso:</b> partire <b>prima con Android</b> (economico, rapido, si compila su Windows), poi affrontare iOS quando sono chiari Mac/account Apple.</div>
+
+  <!-- 8. RISCHI -->
+  <h2><span class="k">8</span> Rischi e mitigazioni</h2>
+  <table>
+    <tr><th>Rischio</th><th>Impatto</th><th>Mitigazione</th></tr>
+    <tr><td>Apple 4.2 "solo un sito"</td><td class="sev a">Alto</td><td>Valorizzare GPS nativo, mappe offline, log catture; plugin Capacitor; descrizione d'uso in barca/spiaggia</td></tr>
+    <tr><td>Nessun Mac per iOS</td><td class="sev a">Alto</td><td>Cloud-Mac / CI macOS a noleggio</td></tr>
+    <tr><td>Dipendenze CDN all'avvio</td><td class="sev m">Medio</td><td>Vendoring librerie in locale (Fase 1)</td></tr>
+    <tr><td>Costo ricorrente Apple</td><td class="sev m">Medio</td><td>A budget; Android resta a 25 USD una tantum</td></tr>
+    <tr><td>Limiti WebView Android</td><td class="sev b">Basso</td><td>Se serve, passare Android a TWA (Opzione C)</td></tr>
+  </table>
+
+  <!-- 9. DECISIONI -->
+  <h2><span class="k">9</span> Decisioni aperte (per partire)</h2>
+  <div class="grid g2">
+    <div class="card"><h4>1 · Approccio</h4><p class="muted">Confermi <b>Capacitor</b>? (o PWABuilder / TWA+Capacitor)</p></div>
+    <div class="card"><h4>2 · Mac per iOS</h4><p class="muted">Hai un Mac? Altrimenti ok a un <b>cloud-Mac</b>?</p></div>
+    <div class="card"><h4>3 · Account</h4><p class="muted">Apriamo <b>Google Play</b> (25 USD) e <b>Apple</b> (99 USD/anno)?</p></div>
+    <div class="card"><h4>4 · Nome / ID</h4><p class="muted">Ok <b>PescaRiva</b> + <b>it.pescariva.app</b>? Categoria <b>Sport</b>?</p></div>
+    <div class="card"><h4>5 · iPad</h4><p class="muted">Solo iPhone o anche <b>iPad</b>?</p></div>
+    <div class="card"><h4>6 · Privacy policy</h4><p class="muted">Ok pubblicarla come pagina sul sito attuale?</p></div>
+  </div>
+  <div class="note">Confermati i punti 1-4 (almeno per Android), si parte subito con la <b>Fase 1</b>. Il documento completo in testo è <b>PROGETTO_PESCARIVA_APP_NATIVE_ANDROID_IOS_STORE_20260717.md</b>.</div>
+
+  <div class="foot">
+    PescaRiva · progetto app native · documento illustrativo (i mockup sono schematici, non screenshot reali)<br>
+    Nessuna modifica al codice è stata effettuata con questo documento.
+  </div>
+
+</div>
+</body>
+</html>
