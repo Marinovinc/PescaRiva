@@ -571,19 +571,23 @@ Candidate (da confermare e prioritizzare):
 2. **Paga** direttamente (prezzo basso) → riceve un **codice licenza** (via email).
 3. **Installa la PWA** (Aggiungi a Home) e **riscatta il codice** nella schermata `access.html` (già pronta) → sblocco, poi funziona **offline** con ricontrollo periodico.
 
-### 25.3 Incasso diretto — due strade
+### 25.3 Incasso diretto — SCELTA: Merchant of Record
 
-- **A) Merchant of Record (consigliato per semplicità):** *Lemon Squeezy*, *Paddle* o *Gumroad*. Vendono **chiavi di licenza**, gestiscono **IVA e fatture al posto tuo**, commissione ~**5%**. Molti hanno **API di licenza** per validare/attivare i codici. Molto meno lavoro fiscale, e comunque **molto meno** del 15-30% degli store.
-- **B) Stripe / PayPal diretto:** commissione più bassa (~**3% + €0,25**), ma **gestisci tu l'IVA** (regime **OSS** UE sui beni digitali) e la fatturazione. Massimo margine, più adempimenti.
+> **Deciso: A) Merchant of Record.** Piattaforma consigliata: **Lemon Squeezy** (pensata per chiavi di licenza software, con **License API** validabile dal client; gestisce IVA e fatture; ~5% + commissioni di pagamento). Alternative equivalenti: **Paddle** (anch'esso MoR + licenze), **Gumroad** (più semplice, commissione più alta).
+
+- **A) Merchant of Record (SCELTO):** vende **chiavi di licenza**, gestisce **IVA e fatture al posto tuo**, ~**5%**, con **API di licenza** per validare/attivare. **Vantaggio chiave: con il MoR NON serve un nostro server** per i codici a pagamento — la piattaforma È il backend di licenza (validazione + scadenza + limite dispositivi). La nostra *license function* (§18.2) resta **opzionale**, solo per codici **regalo/beta** emessi da noi.
+- **B) Stripe / PayPal diretto** *(non scelto):* commissione più bassa (~**3% + €0,25**), ma IVA (OSS UE) e fatture a carico nostro.
 
 ### 25.4 Prezzo
 
 - Potendo evitare le commissioni store, si può andare **molto bassi** (es. **€1-3**) tenendo ~**95-97%** (Stripe) o ~**95%** (MoR). L'utente paga poco, tu incassi quasi tutto.
 
-### 25.5 Codici e validazione
+### 25.5 Codici e validazione (con Merchant of Record)
 
-- I **codici** possono essere generati dalla piattaforma di pagamento (chiavi di licenza) **oppure** dalla nostra **license function** (§18.2).
-- Il **riscatto** avviene nella PWA (`access.html`, già sviluppato); la **validazione** usa l'API della piattaforma di pagamento o la nostra funzione. L'abilitazione è poi **in locale** con periodo di grazia (offline).
+- I **codici a pagamento** sono le **chiavi di licenza** generate da **Lemon Squeezy** (o Paddle). Il **riscatto** avviene nella PWA (`access.html`); la **validazione/attivazione** usa la **License API** del MoR — chiamabile **dal client** con la sola chiave (endpoint `validate` / `activate`), con **limite di attivazioni** per N dispositivi.
+- I **codici regalo/beta** emessi da noi usano (opzionalmente) la nostra **license function** (§18.2).
+- In entrambi i casi l'abilitazione è salvata **in locale** (con scadenza) e **periodo di grazia** → offline; ricontrollo periodico online.
+- Confronto completo delle commissioni e convenienza: vedi il documento dedicato **CONFRONTO_METODI_PAGAMENTO_PESCARIVA_20260717.html/.md**.
 
 ### 25.6 Limiti onesti della PWA su iOS
 

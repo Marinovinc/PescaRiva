@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metodi di pagamento a confronto — PescaRiva</title>
+<style>
+  :root{--bg:#06121f;--bg2:#081a2c;--card:#0e2033;--line:#1f3650;--cy:#16e0ff;--grn:#8dff3a;--ink:#dfeaf5;--sub:#8fb0cc;--warn:#ffd54a;--red:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 45%,var(--bg));color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:0 0 70px}
+  header{background:radial-gradient(1000px 340px at 70% -60%,rgba(22,224,255,.16),transparent),linear-gradient(120deg,#0c2c3d,#0a2130);border-bottom:1px solid var(--cy);padding:32px 20px}
+  header h1{margin:0 0 5px;font-size:26px}
+  header .s{color:var(--sub);font-size:14px}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  h2{font-size:20px;margin:34px 0 6px;display:flex;align-items:center;gap:9px}
+  h2 .k{width:26px;height:26px;flex:0 0 26px;border-radius:8px;background:var(--cy);color:#04121e;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+  h3{font-size:16px;color:var(--cy);margin:18px 0 6px}
+  p{margin:8px 0}.muted{color:var(--sub)}
+  .grid{display:grid;gap:14px}.g2{grid-template-columns:1fr 1fr}
+  @media(max-width:720px){.g2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 17px}
+  .card.win{border-color:var(--grn);box-shadow:0 0 0 1px rgba(141,255,58,.25)}
+  .card.avoid{border-color:#5a2b2b}
+  .card h4{margin:0 0 6px;font-size:16px}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:800;margin-left:6px;vertical-align:middle}
+  .tag.win{background:rgba(141,255,58,.16);color:var(--grn);border:1px solid var(--grn)}
+  .tag.avoid{background:rgba(255,107,107,.14);color:var(--red);border:1px solid var(--red)}
+  ul{margin:8px 0;padding-left:20px}li{margin:5px 0}
+  .pro{color:#bfe9c8}.con{color:#f0c4c4}
+  .note{border-left:3px solid var(--cy);background:#0f2740;border-radius:8px;padding:11px 14px;margin:16px 0;font-size:14.5px}
+  .warnbox{border-left:3px solid var(--warn);background:#2a2413;border-radius:8px;padding:11px 14px;margin:16px 0;font-size:14.5px;color:#eadfb4}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+  th{background:#0f2740;color:var(--cy);font-size:12.5px}
+  td.n{text-align:center;white-space:nowrap}
+  .good{color:var(--grn);font-weight:700}.bad{color:var(--red);font-weight:700}.mid{color:var(--warn);font-weight:700}
+  .verdict{background:linear-gradient(120deg,#0e3320,#0c2233);border:1px solid var(--grn);border-radius:14px;padding:16px 18px;margin:16px 0}
+  .verdict b{color:var(--grn)}
+  .foot{color:#6f8aa6;font-size:12.5px;text-align:center;margin-top:34px;border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>💳 Metodi di pagamento a confronto</h1>
+    <div class="s">Per vendere PescaRiva <b>diretto</b>, a <b>prezzo basso</b> · quale conviene davvero · 17/07/2026</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="note">Obiettivo: incassare <b>diretto</b> (senza store) al <b>minimo costo</b> e col <b>minimo lavoro fiscale</b>. "Conveniente" = commissione <b>+ tempo/burocrazia + rischio</b>, non solo la percentuale.</div>
+
+  <!-- TABELLA -->
+  <h2><span class="k">1</span> Tabella riassuntiva</h2>
+  <table>
+    <tr>
+      <th>Metodo</th><th class="n">Commissione*</th><th class="n">IVA / fatture</th><th class="n">Chiavi licenza</th><th class="n">Serve nostro server</th><th class="n">Sforzo</th><th class="n">Adatto a prezzi bassi</th>
+    </tr>
+    <tr>
+      <td><b>Store IAP</b><br><span class="muted">Apple / Google</span></td>
+      <td class="n bad">15% (small biz)<br>o 30%</td>
+      <td class="n good">le gestisce lo store</td>
+      <td class="n">n/d (usa IAP)</td>
+      <td class="n good">no</td>
+      <td class="n mid">medio (app nativa + review)</td>
+      <td class="n bad">no (commissione alta)</td>
+    </tr>
+    <tr class="">
+      <td><b>Merchant of Record</b><br><span class="muted">Lemon Squeezy / Paddle</span></td>
+      <td class="n mid">~5% + ~€0,50</td>
+      <td class="n good">le gestisce il MoR</td>
+      <td class="n good">sì (License API)</td>
+      <td class="n good">no</td>
+      <td class="n good">basso</td>
+      <td class="n mid">buono (occhio al fisso)</td>
+    </tr>
+    <tr>
+      <td><b>Stripe</b><br><span class="muted">diretto</span></td>
+      <td class="n good">~1,5-2,9% + €0,25</td>
+      <td class="n bad">a carico tuo (OSS)</td>
+      <td class="n mid">fai tu / plugin</td>
+      <td class="n mid">consigliato (webhook)</td>
+      <td class="n bad">alto (fisco+codici)</td>
+      <td class="n mid">buono (fisso più basso)</td>
+    </tr>
+    <tr>
+      <td><b>PayPal</b><br><span class="muted">diretto</span></td>
+      <td class="n mid">~2,5-3,4% + fisso</td>
+      <td class="n bad">a carico tuo</td>
+      <td class="n mid">fai tu</td>
+      <td class="n mid">consigliato</td>
+      <td class="n bad">alto</td>
+      <td class="n mid">medio</td>
+    </tr>
+    <tr>
+      <td><b>Bonifico / manuale</b></td>
+      <td class="n good">~0%</td>
+      <td class="n bad">a carico tuo</td>
+      <td class="n bad">manuale</td>
+      <td class="n good">no</td>
+      <td class="n bad">molto alto (manuale)</td>
+      <td class="n bad">no (non scala)</td>
+    </tr>
+  </table>
+  <p class="muted" style="font-size:12.5px">*Tariffe <b>indicative</b> al 2026, da verificare sui siti ufficiali; variano per paese/metodo carta. "Small biz" = programmi Apple/Google al 15% sotto ~1&nbsp;M$/anno.</p>
+
+  <!-- L'INSIDIA DEI PREZZI BASSI -->
+  <h2><span class="k">2</span> L'insidia dei prezzi bassi: la commissione fissa</h2>
+  <div class="warnbox">⚠️ A prezzi molto bassi (€1-3), la parte <b>fissa</b> per transazione (€0,25-0,50) pesa più della percentuale. Esempio su <b>€1,00</b>: €0,50 di fisso = <b>50%</b>! Su <b>€2,99</b> il fisso €0,50 è già ~17%.</div>
+  <p class="muted">Conseguenza pratica: <b>evita micro-pagamenti singoli da €1</b>. Conviene vendere periodi che <b>ammortizzano</b> il fisso — es. i <b>6 mesi a €3,99</b> o l'<b>annuale a €10</b> — invece di tanti pagamenti da €1. Il prezzo "psicologico" basso lo dà l'importo/mese percepito, ma la <b>transazione</b> è più alta.</p>
+
+  <h3>Netto stimato per una vendita (indicativo)</h3>
+  <table>
+    <tr><th>Metodo</th><th class="n">Su €3,99</th><th class="n">Su €9,99</th><th class="n">Note</th></tr>
+    <tr><td>Store IAP 15%</td><td class="n">~€2,78</td><td class="n">~€6,96</td><td>lo store gestisce IVA; ma serve app nativa</td></tr>
+    <tr><td>Store IAP 30%</td><td class="n">~€2,29</td><td class="n">~€5,73</td><td>senza programma small business</td></tr>
+    <tr><td class="good">Merchant of Record (LS)</td><td class="n">~€3,29</td><td class="n">~€8,99</td><td><b>IVA/fatture incluse</b>, nessun server</td></tr>
+    <tr><td>Stripe diretto</td><td class="n">~€2,96**</td><td class="n">~€7,82**</td><td>**al netto dell'IVA che <b>versi tu</b></td></tr>
+  </table>
+  <p class="muted" style="font-size:12.5px">Valori arrotondati e indicativi (IVA IT 22%). Con Stripe il netto sembra vicino al MoR, ma <b>devi gestire tu IVA e fatture</b> in tutta la UE (regime OSS): è lì il costo nascosto in tempo/rischio.</p>
+
+  <!-- I METODI -->
+  <h2><span class="k">3</span> I metodi, uno per uno</h2>
+  <div class="grid g2">
+    <div class="card win">
+      <h4>Merchant of Record <span class="tag win">CONSIGLIATO</span></h4>
+      <p class="muted">Lemon Squeezy / Paddle. Il MoR è il "venditore ufficiale": incassa, applica e versa l'IVA, emette fattura, ti gira il netto.</p>
+      <ul>
+        <li class="pro">+ <b>zero</b> gestione IVA/fatture (enorme risparmio di tempo/rischio)</li>
+        <li class="pro">+ <b>chiavi di licenza + API</b> di validazione (già pronte per l'app)</li>
+        <li class="pro">+ nessun nostro server necessario</li>
+        <li class="con">– ~5% + un <b>fisso</b> per transazione (pesa sui prezzi bassi)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Stripe (diretto)</h4>
+      <p class="muted">La commissione più bassa, ma sei tu il venditore: IVA e fatture in tutta la UE a carico tuo.</p>
+      <ul>
+        <li class="pro">+ commissione minima (~1,5-2,9% + €0,25)</li>
+        <li class="pro">+ massimo margine e controllo</li>
+        <li class="con">– <b>IVA OSS</b> e fatturazione UE a carico tuo</li>
+        <li class="con">– devi generare/consegnare i codici (webhook + sistema)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>PayPal (diretto)</h4>
+      <p class="muted">Familiare agli utenti, ma commissione media e IVA a carico tuo.</p>
+      <ul>
+        <li class="pro">+ fiducia/riconoscibilità per il cliente</li>
+        <li class="con">– ~2,5-3,4% + fisso; IVA a carico tuo</li>
+        <li class="con">– niente chiavi di licenza integrate</li>
+      </ul>
+    </div>
+    <div class="card avoid">
+      <h4>Store IAP (Apple/Google) <span class="tag avoid">non al lancio</span></h4>
+      <p class="muted">Comodo (gestiscono tutto) ma è proprio ciò che vuoi evitare: 15-30% e regole degli store.</p>
+      <ul>
+        <li class="pro">+ IVA, pagamento e distribuzione gestiti</li>
+        <li class="con">– <b>15-30%</b> di commissione</li>
+        <li class="con">– serve app nativa + approvazione</li>
+      </ul>
+      <p class="muted" style="font-size:12.5px">Utile <b>dopo</b>, per la diffusione di massa (convive con la vendita diretta).</p>
+    </div>
+  </div>
+
+  <!-- VERDETTO -->
+  <h2><span class="k">4</span> Verdetto: cosa conviene</h2>
+  <div class="verdict">
+    <p>🥇 <b>Più conveniente in pratica (indie/nicchia): Merchant of Record — Lemon Squeezy.</b> ~5% ma <b>azzera IVA, fatture e server</b>: il "costo" vero non è solo la percentuale, è il tempo e il rischio fiscale, e qui è quasi zero. In più ti dà le <b>chiavi di licenza</b> già pronte per l'app.</p>
+    <p>🥈 <b>Massimo margine se gestisci tu l'IVA: Stripe.</b> Commissione più bassa, ma preparati a IVA OSS, fatture e alla generazione codici. Ha senso quando i volumi crescono e vale la pena internalizzare.</p>
+    <p>🚫 <b>Da evitare al lancio: gli store</b> (15-30%). Ottimi <b>più avanti</b> per la diffusione di massa, in parallelo alla vendita diretta.</p>
+    <p>💡 <b>Regola sui prezzi:</b> non vendere transazioni da €1 (il fisso le divora). Vendi <b>6 mesi €3,99</b> / <b>annuale €10</b> per ammortizzare la commissione fissa, comunicando comunque il basso costo mensile.</p>
+  </div>
+
+  <div class="foot">PescaRiva · confronto metodi di pagamento · valori indicativi 2026, verificare le tariffe correnti sui siti ufficiali</div>
+
+</div>
+</body>
+</html>
