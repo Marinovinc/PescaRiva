@@ -107,33 +107,33 @@ PREFIX = u'''<!doctype html>
   #backdrop.on{opacity:1;visibility:visible}
   #layerSheet{position:fixed;z-index:1260;left:0;right:0;bottom:0;transform:translateY(103%);transition:transform .26s cubic-bezier(.4,0,.2,1);
     background:var(--card2);border-top:1px solid var(--bd);border-radius:20px 20px 0 0;
-    padding:4px 12px calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:0 -10px 36px #000c;max-height:56vh;overflow:auto}
+    padding:2px 11px calc(env(safe-area-inset-bottom,0px) + 10px);box-shadow:0 -10px 36px #000c;max-height:56vh;overflow:auto}
   #layerSheet.on{transform:translateY(0)}
-  .grab{width:32px;height:4px;border-radius:2px;background:#2b4056;margin:7px auto 2px}
-  .sheetH{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card2);padding:3px 0 7px;z-index:2}
-  .sheetH b{color:var(--ink);font-size:14px;font-weight:600}
-  #sheetClose{background:none;border:none;color:var(--mut);font-size:19px;cursor:pointer;line-height:1}
-  .seg{display:flex;gap:3px;margin:2px 0 6px;background:rgba(255,255,255,.04);border-radius:8px;padding:2px}
-  .seg label{flex:1;text-align:center;padding:6px;border-radius:6px;color:var(--mut);font-size:12px;font-weight:600;cursor:pointer}
+  .grab{width:30px;height:3px;border-radius:2px;background:#2b4056;margin:5px auto 1px}
+  .sheetH{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card2);padding:2px 0 5px;z-index:2}
+  .sheetH b{color:var(--ink);font-size:13px;font-weight:600}
+  #sheetClose{background:none;border:none;color:var(--mut);font-size:18px;cursor:pointer;line-height:1}
+  .seg{display:flex;gap:2px;margin:1px 0 4px;background:rgba(255,255,255,.04);border-radius:7px;padding:2px}
+  .seg label{flex:1;text-align:center;padding:4px;border-radius:5px;color:var(--mut);font-size:11.5px;font-weight:600;cursor:pointer}
   .seg label:has(input:checked){background:var(--acc);color:#04121e}
   .seg input{display:none}
-  .grpT{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);margin:9px 2px 4px;font-weight:600;opacity:.65}
-  .lgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-  .chip{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;border:1px solid #223a52;background:rgba(255,255,255,.03);color:var(--ink);font-size:12px;font-weight:500;line-height:1.1;cursor:pointer;transition:.12s}
+  .grpT{font-size:8.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);margin:6px 2px 3px;font-weight:600;opacity:.6}
+  .lgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+  .chip{display:flex;align-items:center;gap:5px;padding:5px 7px;border-radius:7px;border:1px solid #223a52;background:rgba(255,255,255,.03);color:var(--ink);font-size:11.5px;font-weight:500;line-height:1.05;cursor:pointer;transition:.12s}
   .chip input{display:none}
-  .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:#33506b;flex:0 0 auto;transition:.12s}
+  .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:#33506b;flex:0 0 auto;transition:.12s}
   .chip:has(input:checked){border-color:var(--acc);background:rgba(22,224,255,.12);color:#eafcff}
   .chip:has(input:checked)::before{background:var(--acc);box-shadow:0 0 6px var(--acc)}
-  .rng{display:flex;align-items:center;gap:7px;color:var(--mut);font-size:11px;margin:6px 2px}
-  .rng input[type=range]{flex:1;accent-color:var(--acc)}
-  .rng b{color:var(--ink);min-width:34px;text-align:right;font-weight:600;font-size:11px}
+  .rng{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:10.5px;margin:4px 2px}
+  .rng input[type=range]{flex:1;accent-color:var(--acc);height:3px}
+  .rng b{color:var(--ink);min-width:32px;text-align:right;font-weight:600;font-size:10.5px}
   #sdbDateRow{align-items:center}
-  #sdbDate{flex:1;background:rgba(255,255,255,.05);color:#fff;border:1px solid var(--bd);border-radius:7px;padding:5px;font-size:12px}
-  .acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:8px}
-  .act{padding:8px 5px;border-radius:8px;border:1px solid #223a52;background:rgba(255,255,255,.03);color:var(--ink);font-weight:600;font-size:11px;cursor:pointer;text-align:center}
+  #sdbDate{flex:1;background:rgba(255,255,255,.05);color:#fff;border:1px solid var(--bd);border-radius:6px;padding:4px;font-size:11.5px}
+  .acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:6px}
+  .act{padding:6px 4px;border-radius:7px;border:1px solid #223a52;background:rgba(255,255,255,.03);color:var(--ink);font-weight:600;font-size:10.5px;cursor:pointer;text-align:center}
   .act:active{background:rgba(22,224,255,.13)}
-  .foot2{display:flex;gap:6px;margin-top:10px}
-  .foot2 a{flex:1;text-align:center;text-decoration:none;font-size:12px;border-radius:8px;padding:8px;border:1px solid var(--bd)}
+  .foot2{display:flex;gap:5px;margin-top:7px}
+  .foot2 a{flex:1;text-align:center;text-decoration:none;font-size:11.5px;border-radius:7px;padding:6px;border:1px solid var(--bd)}
   .foot2 a.g{color:var(--acc);border-color:rgba(22,224,255,.4)}
   .foot2 a.c{color:var(--mut)}
   /* ---- popup + pin (identici all'originale: le divIcon del motore usano queste classi) ---- */
