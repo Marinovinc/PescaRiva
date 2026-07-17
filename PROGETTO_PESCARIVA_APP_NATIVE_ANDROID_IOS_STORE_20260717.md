@@ -407,6 +407,8 @@ Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)
 - [ ] Canale di **vendita diretta codici** (sito + Stripe) con gestione IVA/fattura.
 - [ ] *(Opzionale)* Apple Offer Codes / Google promo codes per le promozioni.
 
+> **Mockup grafici pronti:** `MOCKUP_REGISTRAZIONE_ACQUISTO_PESCARIVA_20260717.html` — 3 schermate (1. acquisto/paywall, 2. attivazione con codice, 3. sbloccato) nello stile dell'app, con flusso e note di conformità store. Testi/valori da rifinire.
+
 ---
 
 ## 20. Suite di app (brand ed espansione)

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PescaRiva — Mockup registrazione &amp; acquisto</title>
+<style>
+  :root{--bg:#06121f;--bg2:#081a2c;--card:#0e2033;--line:#1f3650;--cy:#16e0ff;--grn:#8dff3a;--ink:#dfeaf5;--sub:#8fb0cc;--warn:#ffd54a}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 45%,var(--bg));color:var(--ink);
+    font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:0 0 70px}
+  header{background:linear-gradient(120deg,#0c2c3d,#0a2130);border-bottom:1px solid var(--cy);padding:30px 20px}
+  header h1{margin:0 0 4px;font-size:25px}
+  header .s{color:var(--sub);font-size:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  h2{font-size:19px;margin:34px 0 4px}
+  .muted{color:var(--sub)}
+  .note{border-left:3px solid var(--cy);background:#0f2740;border-radius:8px;padding:11px 14px;margin:16px 0;font-size:14px}
+  .warnbox{border-left:3px solid var(--warn);background:#2a2413;border-radius:8px;padding:11px 14px;margin:16px 0;font-size:14px;color:#eadfb4}
+
+  .row{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;margin:22px 0}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:300px}
+  .cap{font-size:13px;color:var(--sub);text-align:center}
+  .cap b{color:var(--cy)}
+
+  /* phone */
+  .phone{position:relative;width:274px;height:576px;background:#02080e;border:10px solid #10202e;border-radius:38px;
+    box-shadow:0 20px 55px rgba(0,0,0,.55), inset 0 0 0 1px #24425c;overflow:hidden;flex:0 0 auto}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:22px;background:#02080e;border-radius:0 0 15px 15px;z-index:6}
+  .screen{position:absolute;inset:0;background:radial-gradient(600px 240px at 50% -60px,rgba(22,224,255,.12),transparent),var(--bg);
+    padding:40px 18px 16px;display:flex;flex-direction:column;overflow:auto}
+  .screen::-webkit-scrollbar{display:none}
+  .logo{font-size:15px;font-weight:800;color:var(--cy);text-align:center;letter-spacing:.3px}
+  .htitle{font-size:19px;font-weight:800;text-align:center;margin:10px 0 2px}
+  .hsub{font-size:12px;color:var(--sub);text-align:center;line-height:1.4;margin-bottom:12px}
+  .offer{border:1px solid var(--cy);border-radius:14px;padding:12px 12px 13px;background:rgba(22,224,255,.08);text-align:center;margin-bottom:12px}
+  .offer .lbl{font-size:9.5px;letter-spacing:.6px;color:var(--cy);font-weight:800}
+  .offer .price{font-size:34px;font-weight:800;color:#eafcff;line-height:1.05}
+  .offer .price small{font-size:13px;font-weight:600;color:var(--sub)}
+  .offer .then{font-size:11.5px;color:var(--sub);margin-top:2px}
+  .plan{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin:6px 0;background:rgba(255,255,255,.02)}
+  .plan.sel{border-color:var(--cy);background:rgba(22,224,255,.10)}
+  .plan .rad{width:18px;height:18px;border-radius:50%;border:2px solid #3a5570;flex:0 0 auto}
+  .plan.sel .rad{border-color:var(--cy);background:radial-gradient(circle,var(--cy) 42%,transparent 46%)}
+  .plan .pn{font-size:13.5px;font-weight:600}
+  .plan .pd{font-size:11px;color:var(--sub)}
+  .plan .amt{margin-left:auto;text-align:right;font-size:13.5px;font-weight:700;color:#eafcff}
+  .best{display:inline-block;font-size:8.5px;background:rgba(141,255,58,.16);color:var(--grn);border:1px solid var(--grn);border-radius:6px;padding:1px 5px;font-weight:800;margin-left:6px;vertical-align:middle}
+  .btn{background:var(--cy);color:#04121e;border:none;border-radius:12px;padding:13px;font-weight:800;text-align:center;font-size:15px;margin-top:12px}
+  .btn.g{background:var(--grn);color:#0a2a06}
+  .ghost{background:none;border:1px solid var(--line);color:var(--ink)}
+  .link{color:var(--cy);text-align:center;font-size:13px;margin-top:12px;text-decoration:underline}
+  .fine{font-size:9.5px;color:#6f8aa6;text-align:center;margin-top:auto;padding-top:12px;line-height:1.5}
+  .fine a{color:#6f8aa6}
+  .field{background:#0e1b30;border:1px solid #2c416c;border-radius:10px;padding:13px;color:#fff;font-size:16px;text-align:center;letter-spacing:2px;margin:6px 0}
+  .field.small{letter-spacing:0;font-size:13px;text-align:left;color:var(--sub)}
+  .flist{font-size:12px;color:#cfe0f0;margin:2px 0 6px}
+  .flist div{margin:5px 0;display:flex;gap:7px;align-items:center}
+  .flist .ck{color:var(--grn);font-weight:800}
+  .center{text-align:center}
+  .big{font-size:66px;text-align:center;line-height:1.1;margin-top:20px}
+  .storebar{margin-top:10px;border:1px dashed #2c416c;border-radius:10px;padding:9px;font-size:10.5px;color:var(--sub);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🎣 PescaRiva — Registrazione &amp; acquisto</h1>
+    <div class="s">Mockup delle schermate in-app · offerta 6 mesi €3,99, poi €1/mese o €10/anno · incasso ibrido (store + codice)</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="note">Questi sono <b>mockup schematici</b> (non screenshot). Il foglio di pagamento vero (carta, Face ID, ecc.) è mostrato <b>dallo store</b> (Apple/Google): l'app apre quel foglio quando tocchi "Sblocca". Il riscatto del <b>codice</b> avviene dentro l'app; la <b>vendita</b> dei codici sta sul sito, non qui.</div>
+
+  <div class="row">
+
+    <!-- SCHERMATA 1: ACQUISTO / PAYWALL -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="logo">🎣 PescaRiva</div>
+          <div class="htitle">Sblocca tutte le funzioni</div>
+          <div class="hsub">Fondale satellitare, canaloni, righello di lancio, catture e uso offline.</div>
+
+          <div class="offer">
+            <div class="lbl">★ OFFERTA DI LANCIO</div>
+            <div class="price">€3,99 <small>/ primi 6 mesi</small></div>
+            <div class="then">poi si rinnova col piano scelto qui sotto</div>
+          </div>
+
+          <div class="plan sel">
+            <div class="rad"></div>
+            <div><div class="pn">Annuale <span class="best">RISPARMI ~2 MESI</span></div><div class="pd">dopo i 6 mesi</div></div>
+            <div class="amt">€10<span style="font-size:11px;color:var(--sub)">/anno</span></div>
+          </div>
+          <div class="plan">
+            <div class="rad"></div>
+            <div><div class="pn">Mensile</div><div class="pd">dopo i 6 mesi</div></div>
+            <div class="amt">€1<span style="font-size:11px;color:var(--sub)">/mese</span></div>
+          </div>
+
+          <div class="btn">Sblocca — €3,99</div>
+          <div class="link">Ho un codice di attivazione</div>
+          <div class="fine">Pagamento gestito da App&nbsp;Store / Google&nbsp;Play · si rinnova, disdici quando vuoi · <a href="#">Termini</a> · <a href="#">Privacy</a></div>
+        </div>
+      </div>
+      <div class="cap"><b>1 · Acquisto (paywall)</b><br>l'utente sceglie il piano e tocca Sblocca → si apre il pagamento dello store</div>
+    </div>
+
+    <!-- SCHERMATA 2: ATTIVAZIONE / REGISTRAZIONE CODICE -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="logo">🎣 PescaRiva</div>
+          <div class="htitle">Hai un codice?</div>
+          <div class="hsub">Inserisci il codice ricevuto (regalo, promo o acquistato sul sito). Nessuna password.</div>
+
+          <div class="field">PESCA-████-████</div>
+
+          <div class="field small">✉️&nbsp; Email (facoltativa, per ricevuta e recupero)</div>
+
+          <div class="btn g">Attiva</div>
+
+          <div class="storebar">🔒 Il codice viene verificato una volta, poi l'app funziona <b>offline</b></div>
+
+          <div class="flist" style="margin-top:14px">
+            <div><span class="ck">✓</span> Attivazione immediata</div>
+            <div><span class="ck">✓</span> Valida su questo dispositivo</div>
+            <div><span class="ck">✓</span> Nessun account, nessuna password</div>
+          </div>
+
+          <div class="link">Non hai un codice? Vedi i piani</div>
+          <div class="fine">Il codice non è collegato alla tua identità · si può usare senza email</div>
+        </div>
+      </div>
+      <div class="cap"><b>2 · Attivazione con codice</b><br>alternativa all'acquisto in-app: riscatto immediato, poi offline</div>
+    </div>
+
+    <!-- SCHERMATA 3: SBLOCCATO -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="logo">🎣 PescaRiva</div>
+          <div class="big">✅</div>
+          <div class="htitle">Tutto sbloccato</div>
+          <div class="hsub">Licenza attiva. Le funzioni restano disponibili anche senza rete.</div>
+
+          <div class="offer" style="border-color:var(--grn);background:rgba(141,255,58,.08)">
+            <div class="lbl" style="color:var(--grn)">LICENZA ATTIVA</div>
+            <div class="price" style="font-size:18px">fino al 17/01/2027</div>
+            <div class="then">rinnovo automatico · gestisci dallo store</div>
+          </div>
+
+          <div class="flist" style="margin-top:10px">
+            <div><span class="ck">✓</span> Profondità SDB + isobate</div>
+            <div><span class="ck">✓</span> Canaloni · righello · profilo</div>
+            <div><span class="ck">✓</span> Prede · catture · offline</div>
+          </div>
+
+          <div class="btn">Vai alla mappa</div>
+          <div class="link">Gestisci abbonamento</div>
+          <div class="fine">Grazie per il supporto · lo sviluppo continua con nuove funzioni</div>
+        </div>
+      </div>
+      <div class="cap"><b>3 · Sbloccato</b><br>conferma e ingresso nell'app (da acquisto o da codice)</div>
+    </div>
+
+  </div>
+
+  <div class="warnbox">⚠️ <b>Conformità store:</b> l'acquisto avviene <b>solo</b> con il pagamento dello store (schermata 1). La schermata 2 (codice) è un <b>riscatto</b> — ammesso — ma <b>non</b> vende né pubblicizza l'acquisto esterno. La vendita dei codici sta sul sito/Facebook.</div>
+
+  <h2>Flusso</h2>
+  <div class="note" style="border-color:var(--grn)">
+    <b>Apri l'app</b> → se non attiva compare la <b>schermata 1 (acquisto)</b> → l'utente <b>compra</b> (foglio dello store) <b>oppure</b> tocca "Ho un codice" → <b>schermata 2 (attivazione)</b> → in entrambi i casi → <b>schermata 3 (sbloccato)</b> → mappa. Alla riapertura, licenza verificata <b>in locale</b> (offline con periodo di grazia): niente schermate, si va diretti alla mappa.
+  </div>
+
+  <div class="cap" style="margin-top:26px">Mockup PescaRiva · 17/07/2026 · colori/stile dell'app · valori e testi da rifinire</div>
+
+</div>
+</body>
+</html>
