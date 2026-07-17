@@ -145,6 +145,32 @@
   </div>
   <div class="warnbox">⚠️ <b>Rischio onesto:</b> Apple può rifiutare app che sembrano "solo un sito" (regola <b>4.2</b>). PescaRiva ha buone difese (GPS, mappe offline, batimetria, log catture) ma va presentata valorizzando le funzioni native. Android è invece semplice ed economico.</div>
 
+  <!-- 1B. VENDITA DIRETTA -->
+  <h2><span class="k" style="background:var(--grn);color:#04121e">€</span> Strategia di lancio: vendita diretta, senza store</h2>
+  <div class="warnbox">🎯 <b>Obiettivo:</b> vendere <b>diretto</b>, a <b>prezzi bassi</b>, <b>senza le commissioni 15-30%</b> di Apple/Google — almeno al lancio.</div>
+  <p class="muted">La chiave: <b>PescaRiva è già una PWA</b>, e la PWA si <b>installa dal browser</b> (Aggiungi a schermata Home) sia su iOS che Android → icona propria, schermo intero, offline. <b>Nessuno store, nessuna commissione.</b></p>
+  <div class="grid g3">
+    <div class="card"><h4>📱 iOS</h4><p class="muted">Fuori dall'App Store non si distribuiscono app native al pubblico → si usa la <b>PWA</b> (installabile da Safari). Nessuna commissione.</p></div>
+    <div class="card"><h4>🤖 Android</h4><p class="muted"><b>PWA</b> e/o <b>APK diretto</b> (sideload dal tuo sito). Nessuna commissione.</p></div>
+    <div class="card hi"><h4>🎟️ Come si vende</h4><p class="muted">Codice licenza venduto sul <b>sito/Facebook</b>, riscattato nella PWA (<code>access.html</code>, già pronto). Prezzo anche <b>€1-3</b>.</p></div>
+  </div>
+
+  <h3>Flusso di vendita diretta</h3>
+  <div class="arch">
+    <div class="box web" style="min-width:300px"><b>1 · Sito / Facebook</b><div class="s">l'utente paga (prezzo basso)</div></div>
+    <div class="arrow"></div>
+    <div class="box cap"><b>2 · Riceve un codice licenza</b><div class="s">via email · generato dalla piattaforma di pagamento o dalla nostra license function</div></div>
+    <div class="arrow"></div>
+    <div class="box and"><b>3 · Installa la PWA + riscatta il codice</b><div class="s">Aggiungi a Home · sblocco · poi offline</div></div>
+  </div>
+
+  <h3>Incasso diretto — due strade</h3>
+  <div class="grid g2">
+    <div class="card hi"><h4>A · Merchant of Record <span class="tag rec">consigliato</span></h4><p class="muted">Lemon Squeezy / Paddle / Gumroad: vendono <b>chiavi di licenza</b>, gestiscono <b>IVA e fatture</b> per te, ~<b>5%</b>, con API di licenza. Poco lavoro fiscale.</p></div>
+    <div class="card"><h4>B · Stripe / PayPal diretto</h4><p class="muted">Commissione più bassa (~<b>3% + €0,25</b>), ma <b>gestisci tu l'IVA</b> (OSS UE) e le fatture. Massimo margine, più adempimenti.</p></div>
+  </div>
+  <div class="note">🔭 <b>Dopo (opzionale):</b> quando vuoi diffusione di massa, puoi <b>anche</b> pubblicare la versione Capacitor sugli store (§§4-9) mantenendo la vendita diretta. Le due cose convivono: chi compra diretto usa il codice, chi arriva dallo store usa l'IAP. <span class="muted">Limiti onesti PWA iOS: nessun listing store (scoperta via sito/FB), alcune API web limitate — adeguato per un pubblico di nicchia.</span></div>
+
   <!-- 2. STATO ATTUALE + MOCKUP -->
   <h2><span class="k">2</span> Stato attuale — cosa impacchettiamo</h2>
   <p class="muted">Oggi PescaRiva è una <b>PWA</b> (HTML+CSS+JS, Leaflet) servita da GitHub Pages. Il motore è un unico file <b>engine.js</b> condiviso da <b>index.html</b> (PC) e <b>m.html</b> (mobile). È questa la base che diventa app.</p>

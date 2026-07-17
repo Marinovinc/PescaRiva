@@ -12,6 +12,8 @@
 
 **Obiettivo:** pubblicare PescaRiva come **vera app scaricabile** su **Google Play** (Android) e **App Store** (iPhone/iPad), partendo dall'attuale PWA senza riscrivere il codice.
 
+> **⭐ STRATEGIA DI LANCIO (aggiornata):** al lancio **NON** si passa dagli store. Si vende **diretto** (prezzo basso, **niente commissioni 15-30%**) tramite la **PWA installabile** (funziona su iOS e Android) + **codici licenza** venduti sul proprio sito/Facebook. Gli store (Capacitor, §§4-9) restano un'**opzione successiva** per la diffusione di massa. Dettaglio operativo: **vedi §25**.
+
 **Approccio consigliato:** **Capacitor** (di Ionic) come guscio nativo unico per entrambe le piattaforme. Riusa gli **stessi file web** (`m.html`, `engine.js`, ecc.), aggiunge plugin nativi (geolocalizzazione, splash, status bar, filesystem offline) e produce un progetto **Android Studio** e uno **Xcode** che si caricano sugli store. Un solo codice, due app.
 
 **Costi vivi (obbligatori):**
@@ -553,7 +555,58 @@ Candidate (da confermare e prioritizzare):
 
 ---
 
-## 25. Riferimenti
+## 25. Vendita diretta senza store (PWA + codici) — strategia di lancio
+
+> Obiettivo dell'utente: vendere **direttamente**, a **prezzi bassi**, **senza pagare le commissioni** di Apple/Google e senza passare dalle loro regole, almeno al lancio.
+
+### 25.1 Il vincolo onesto (perché la via è la PWA)
+
+- **iOS:** fuori dall'App Store **non** è possibile distribuire app native al pubblico generico (le eccezioni UE post-DMA — marketplace alternativi / web distribution — hanno requisiti onerosi: iscrizione, notarizzazione, soglie). Quindi, per non passare da Apple, la strada è la **PWA**.
+- **Android:** è possibile distribuire l'**APK** direttamente (sideload dal proprio sito) **e/o** la PWA. Nessuna commissione.
+- **Buona notizia:** PescaRiva è **già una PWA**. Su **iOS e Android** si "installa" dal browser (**Aggiungi a schermata Home**): icona propria, schermo intero, funziona **offline**. Zero store, zero commissioni.
+
+### 25.2 Come funziona (flusso di vendita diretta)
+
+1. L'utente arriva dal **sito** o da **Facebook**.
+2. **Paga** direttamente (prezzo basso) → riceve un **codice licenza** (via email).
+3. **Installa la PWA** (Aggiungi a Home) e **riscatta il codice** nella schermata `access.html` (già pronta) → sblocco, poi funziona **offline** con ricontrollo periodico.
+
+### 25.3 Incasso diretto — due strade
+
+- **A) Merchant of Record (consigliato per semplicità):** *Lemon Squeezy*, *Paddle* o *Gumroad*. Vendono **chiavi di licenza**, gestiscono **IVA e fatture al posto tuo**, commissione ~**5%**. Molti hanno **API di licenza** per validare/attivare i codici. Molto meno lavoro fiscale, e comunque **molto meno** del 15-30% degli store.
+- **B) Stripe / PayPal diretto:** commissione più bassa (~**3% + €0,25**), ma **gestisci tu l'IVA** (regime **OSS** UE sui beni digitali) e la fatturazione. Massimo margine, più adempimenti.
+
+### 25.4 Prezzo
+
+- Potendo evitare le commissioni store, si può andare **molto bassi** (es. **€1-3**) tenendo ~**95-97%** (Stripe) o ~**95%** (MoR). L'utente paga poco, tu incassi quasi tutto.
+
+### 25.5 Codici e validazione
+
+- I **codici** possono essere generati dalla piattaforma di pagamento (chiavi di licenza) **oppure** dalla nostra **license function** (§18.2).
+- Il **riscatto** avviene nella PWA (`access.html`, già sviluppato); la **validazione** usa l'API della piattaforma di pagamento o la nostra funzione. L'abilitazione è poi **in locale** con periodo di grazia (offline).
+
+### 25.6 Limiti onesti della PWA su iOS
+
+- Nessun listing sullo store (la **scoperta** avviene via sito/Facebook/passaparola).
+- Alcune limitazioni delle API web (ma su **iOS 16.4+** ci sono le notifiche web; installazione e offline funzionano bene).
+- Per un pubblico di **nicchia** che acquista direttamente, è più che adeguato.
+
+### 25.7 Dopo (opzionale): gli store per la diffusione
+
+- Quando si vuole **diffusione di massa**, si può comunque pubblicare la versione **Capacitor** sugli store (§§4-9), **mantenendo** la vendita diretta per chi arriva dal sito. Le due cose **convivono**: chi compra diretto usa il codice, chi arriva dallo store usa l'IAP.
+
+### 25.8 Checklist (vendita diretta)
+
+- [ ] Scegliere il metodo d'incasso (MoR vs Stripe/PayPal) — §25.3.
+- [ ] Impostare la **pagina di vendita** (sito) con il prodotto e il prezzo.
+- [ ] Collegare **pagamento → generazione codice → email** (automatico o manuale).
+- [ ] Collegare `access.html` alla **validazione reale** del codice (API pagamento o license function).
+- [ ] Guida "**come installare la PWA**" (iOS: Aggiungi a Home da Safari; Android: Aggiungi a Home / installa).
+- [ ] *(Opzionale)* build **APK** Android per download diretto dal sito.
+
+---
+
+## 26. Riferimenti
 
 - Repo e sito: `github.com/Marinovinc/PescaRiva` — `https://marinovinc.github.io/PescaRiva/`
 - Capacitor (guscio nativo cross-platform), PWABuilder (packaging PWA→store), Bubblewrap/TWA (Android).
