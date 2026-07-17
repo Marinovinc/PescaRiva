@@ -235,15 +235,15 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 
 ---
 
-## 18. Architettura server-less: accesso a codice + pacchi offline
+## 18. Architettura server-less: app autonoma + accesso a codice
 
-> Requisito: **l'app deve funzionare senza un server di supporto**. Un server (minimo, serverless) serve **solo** per due cose: **(A) validare il codice di accesso** e **(B) distribuire i pacchi mappe/dati offline**. Tutto il resto gira sul dispositivo.
+> Requisito: **l'app deve funzionare senza un server di supporto**. L'app è **autonoma**: scarica mappe/dati dai **portali pubblici** e **calcola la batimetria sul telefono**, con caching automatico per l'offline. Un server (minimo, serverless) serve **solo** per **validare il codice di accesso**. Nessun dato di mappa o batimetria passa dal nostro server.
 
 ### 18.1 Principio: offline-first, server-opzionale
 
 - **Il motore dell'app (`engine.js`) e i dati dell'utente restano sul dispositivo.** Catture, spot, calibrazioni, zone porto: solo in locale.
 - **I dati "live" (mappe, batimetria, porti) NON passano dal nostro server:** l'app li prende — quando online — direttamente dai servizi pubblici di terze parti (Esri, OpenStreetMap, EMODnet, Copernicus/Sentinel via AWS, Overpass). Quindi l'app **non dipende** da un nostro backend per le funzioni.
-- **Il nostro server NON è mai nel percorso d'uso delle funzioni.** Viene contattato solo: all'**attivazione** (e a un ricontrollo periodico) e quando l'utente **scarica un pacco** offline.
+- **Il nostro server NON è mai nel percorso d'uso delle funzioni.** Viene contattato solo all'**attivazione** e a un **ricontrollo periodico** della licenza. Mappe e batimetria **non passano dal nostro server**: l'app scarica dai portali e calcola sul telefono.
 - Conseguenza: se il nostro server è irraggiungibile, l'app **continua a funzionare** (entro il periodo di grazia della licenza e con i pacchi già scaricati).
 
 ### 18.2 Ruolo A — Controllo accesso con codice di attivazione
@@ -268,35 +268,29 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 **Amministrazione**
 - Un modo semplice per **generare** e **revocare** codici: uno script CLI o una mini-pagina admin protetta. I codici possono avere scadenza e numero massimo di attivazioni.
 
-### 18.3 Ruolo B — Pacchi mappe/dati offline per regione
+### 18.3 Funzionamento autonomo sul dispositivo (mappe + batimetria on-device)
 
-**Cos'è un pacco**
-- Un archivio statico che contiene, per un tratto di costa: **tessere mappa** pre-scaricate (range di zoom), la **batimetria SDB pre-elaborata** (raster già calcolato, così il telefono non ricalcola nulla), i **poligoni dei porti** e l'elenco **località** della zona.
-- Esempio: *"Pacco Lazio sud (Sabaudia-Circeo)"*.
+> **Niente pacchi pre-elaborati, niente download di mappe dal nostro server.** L'app è autonoma come l'attuale PWA.
 
-**Distribuzione (server-less davvero)**
-- I pacchi sono **file statici** su object storage / CDN (es. Cloudflare R2, S3, Backblaze B2, o GitHub Releases): **nessun calcolo lato server**, solo file.
-- Un **manifest** pubblico (`packs.json`) elenca i pacchi disponibili con: `id`, `nome`, `bbox`, `versione`, `dimensione`, `url`, `checksum`.
+**Comportamento**
+- Quando l'utente **cambia mappa o zona di pesca**, l'app scarica **da sola e in silenzio** ciò che serve **direttamente dai portali pubblici**: tessere mappa (Esri/OSM), scene **Sentinel-2** (AWS Open Data), EMODnet, porti (Overpass).
+- La **batimetria SDB viene calcolata sul telefono** (logica Stumpf già in `engine.js`, con geotiff.js + proj4), **non** pre-elaborata su un PC.
+- Ciò che l'utente visita finisce in **cache** (service worker + Filesystem): quella zona torna disponibile **offline** senza operazioni manuali (caching automatico e silenzioso).
 
-**Flusso sul dispositivo**
-1. Schermata "Scarica pacchi offline" → elenco regioni (dal manifest).
-2. L'utente scarica un pacco → l'app **verifica il checksum** → lo **scompatta** nel filesystem dell'app (plugin Capacitor Filesystem / Cache Storage).
-3. Offline, l'app legge tessere e SDB **dal pacco locale** (sorgente tile locale + griglia SDB locale), con fallback ai servizi live quando c'è rete.
+**Conseguenze**
+- Il **nostro server non ospita né serve** mappe o batimetria: nessun manifest, nessun pacco, nessuna pipeline di pre-elaborazione.
+- La distribuzione dell'**app** avviene dagli **store** (ed eventualmente un APK diretto dal sito, se scelto). Piccoli aggiornamenti di **contenuti/config** (es. elenco località di default) possono restare dentro l'app o essere un file statico opzionale.
+- Resta valido e invariato il **controllo accesso con codice** (§18.2): è l'**unica** funzione di backend necessaria.
 
-**Aggancio ai due ruoli (accesso ↔ download)**
-- Il **download dei pacchi è riservato agli utenti attivati**: la *license function* rilascia un **URL firmato a scadenza breve** per scaricare il file dal CDN. Così i due ruoli del server sono collegati e il pacco non è scaricabile senza licenza valida.
-
-**Pipeline di pre-elaborazione (sul tuo PC, non a runtime)**
-- Uno **script di build** che, dato un `bbox`: scarica le scene Sentinel-2, calcola il **raster SDB** (riusando la logica Stumpf già presente in `engine.js`), pre-renderizza le tessere, interroga Overpass per i porti, e produce il **pacco** + aggiorna il `manifest`. È qui che la batimetria diventa "pre-elaborata": calcolata **una volta**, spedita come file.
-
-**Versioning**
-- Ogni pacco ha una **versione**; l'app confronta col manifest e propone l'**aggiornamento** quando il pacco cambia.
+**Prestazioni / attenzioni (on-device)**
+- Il calcolo SDB sul telefono è già collaudato nella PWA; su device di fascia media va verificata la fluidità (dimensione griglia, numero scene del composito).
+- La **cache** va gestita con un **limite di spazio** e una politica di **sfratto** delle zone meno recenti, per non riempire la memoria del telefono.
 
 ### 18.4 Stack consigliato e costi
 
 - **License function:** una funzione serverless (es. **Cloudflare Workers**, oppure Supabase Edge Function / Firebase Functions / piccola Lambda). Database codici su **KV/D1** (Cloudflare) o Postgres (Supabase).
-- **Storage pacchi:** object storage/CDN (**Cloudflare R2**, S3, B2, o GitHub Releases per iniziare).
-- **Costi:** i **piani gratuiti** coprono la fase iniziale; crescita **pay-as-you-go**; **nessun server da mantenere** (serverless). Consigliato per minimalismo: **Cloudflare Workers + R2** (o Supabase se preferisci SQL + pannello admin pronto).
+- **Nessuno storage di mappe:** i dati arrivano dai portali pubblici e sono calcolati sul telefono. Un piccolo file **config** statico opzionale può stare su qualsiasi hosting/CDN o nel repo.
+- **Costi:** i **piani gratuiti** coprono ampiamente la fase iniziale (la sola license function fa pochissime richieste); **nessun server da mantenere**. Consigliato: **Cloudflare Workers + KV** (o Supabase se preferisci SQL + pannello admin pronto).
 
 ### 18.5 Impatti su privacy e store
 
@@ -307,25 +301,23 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 ### 18.6 Schema
 
 ```
-                DISPOSITIVO (offline-first)
-   ┌───────────────────────────────────────────┐
-   │  App + engine.js                           │
-   │  token licenza (verificato IN LOCALE)      │
-   │  pacchi offline (Filesystem)               │
-   │  dati utente: catture/spot (solo locale)   │
-   └───────┬───────────────────────┬────────────┘
-           │ occasionale           │ on-demand
-           ▼                       ▼
-   [ License Function ]      [ CDN / Object storage ]
-    valida codice             manifest.json + pacchi
-    firma token               (URL firmati per il download)
-    rilascia URL firmati
-           │
+                DISPOSITIVO (autonomo, offline-first)
+   ┌───────────────────────────────────────────────┐
+   │  App + engine.js                               │
+   │  scarica da solo dai portali (silenzioso)      │
+   │  CALCOLA la batimetria SDB sul telefono        │
+   │  cache automatica delle zone visitate          │
+   │  token licenza (verificato IN LOCALE)          │
+   │  dati utente: catture/spot (solo locale)       │
+   └───────┬───────────────────────────┬────────────┘
+           │ occasionale               │ live, quando online
+           ▼                           ▼
+   [ License Function ]         [ PORTALI PUBBLICI ]
+    valida codice                Esri · OSM · EMODnet
+    firma token                  Copernicus/Sentinel · Overpass
+           │                     (NON il nostro server)
            ▼
     [ DB codici (KV/SQL) ]
-
-   Dati LIVE quando online (NON nostro server):
-   Esri · OSM · EMODnet · Copernicus/Sentinel · Overpass
 ```
 
 ### 18.7 Checklist di realizzazione
@@ -335,9 +327,10 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 - [ ] Implementare la **license function** (valida codice, firma token, rilascia URL firmati).
 - [ ] Predisporre **DB codici** + strumento genera/revoca.
 - [ ] Schermata **attivazione** nell'app + storage sicuro del token + verifica locale + ricontrollo/grazia.
-- [ ] Definire il **formato pacco** e scrivere la **pipeline di pre-elaborazione** (SDB + tessere + porti).
-- [ ] Pubblicare **manifest** + pacchi su CDN; schermata **download/gestione pacchi** nell'app (checksum, unpack, uso offline, aggiornamenti).
-- [ ] Aggiornare **privacy policy** (deviceId, download pacchi).
+- [ ] Verificare il **caching automatico** delle zone visitate nel guscio nativo (service worker + Filesystem) con **limite di spazio** e sfratto.
+- [ ] Verificare le **prestazioni del calcolo SDB on-device** su telefoni di fascia media.
+- [ ] (Opzionale) piccolo file **config** statico per contenuti aggiornabili senza passare dagli store.
+- [ ] Aggiornare **privacy policy** (deviceId per la licenza).
 
 ---
 

@@ -206,8 +206,8 @@
   </div>
 
   <!-- 3B. SERVER-LESS -->
-  <h2><span class="k" style="background:var(--grn);color:#04121e">🔒</span> App autonoma — il server serve solo per accesso e download</h2>
-  <p class="muted">Requisito: l'app funziona <b>senza un server di supporto</b>. Un backend minimo (serverless) fa <b>solo</b> due cose — validare il <b>codice di accesso</b> e distribuire i <b>pacchi offline</b>. Se il server è irraggiungibile, l'app <b>continua a funzionare</b> (entro il periodo di grazia e coi pacchi già scaricati).</p>
+  <h2><span class="k" style="background:var(--grn);color:#04121e">🔒</span> App autonoma — mappe e batimetria sul telefono, server solo per l'accesso</h2>
+  <p class="muted">Requisito: l'app funziona <b>senza un server di supporto</b>. Le <b>mappe</b> e la <b>batimetria</b> arrivano <b>dai portali pubblici</b> e sono <b>elaborate sul telefono</b>; il nostro backend serve <b>solo</b> a validare il <b>codice di accesso</b>. Se il server è irraggiungibile, l'app <b>continua a funzionare</b> (entro il periodo di grazia e con le zone già visitate in cache).</p>
 
   <div class="grid g2">
     <div class="card">
@@ -221,37 +221,36 @@
       <p class="muted">Token <b>firmato</b> dal server e <b>verificato in locale</b> dall'app (chiave pubblica): niente rete per l'uso quotidiano, impossibile falsificarlo. Legato a un <b>UUID casuale</b> del device — nessuna password, nessun dato personale.</p>
     </div>
     <div class="card">
-      <h4>📦 Pacchi mappe offline per regione</h4>
-      <p class="muted">Un "pacco" per un tratto di costa contiene:</p>
+      <h4>📲 Funzionamento autonomo sul dispositivo</h4>
+      <p class="muted">L'app <b>non scarica pacchi</b> dal nostro server. Quando l'utente <b>cambia mappa o zona di pesca</b>, l'app scarica <b>da sola e in silenzio</b> ciò che serve <b>direttamente dai portali pubblici</b> e <b>calcola la batimetria SDB sul telefono</b>.</p>
       <div class="pillrow">
-        <span class="p">🗺️ Tessere mappa</span>
-        <span class="p">🛰️ SDB pre-elaborata</span>
-        <span class="p">🚫 Porti</span>
-        <span class="p">📍 Località</span>
+        <span class="p">🌐 Download silente dai portali</span>
+        <span class="p">🛰️ SDB calcolata sul telefono</span>
+        <span class="p">💾 Cache automatica per l'offline</span>
       </div>
-      <p class="muted">File <b>statici</b> su CDN, scaricati <b>una volta</b> (con URL firmato, riservato agli utenti attivati), poi tutto funziona offline. La batimetria è calcolata <b>a monte sul PC</b> (pipeline), non sul telefono.</p>
+      <p class="muted">Ciò che l'utente visita resta in <b>cache</b>: quella zona torna disponibile <b>offline</b> senza operazioni manuali. Nessuna pre-elaborazione su PC, nessun pacco dal nostro server.</p>
     </div>
   </div>
 
   <h3>Schema: cosa tocca (e cosa NON tocca) il server</h3>
   <div class="arch">
-    <div class="box web" style="min-width:300px"><b>Dispositivo (offline-first)</b><div class="s">app + engine.js · token verificato in locale · pacchi offline · dati utente solo locali</div></div>
+    <div class="box web" style="min-width:330px"><b>Dispositivo (autonomo, offline-first)</b><div class="s">app + engine.js · scarica da solo dai portali e <b>calcola la SDB sul telefono</b> · cache automatica per l'offline · token verificato in locale · dati utente solo locali</div></div>
     <div class="arrow"></div>
     <div class="split">
       <div class="plat">
-        <div class="box cap"><b>🔑 License function</b><div class="s">valida codice · firma token · rilascia URL firmati</div></div>
-        <div class="rail-lbl">contatto occasionale</div>
+        <div class="box cap"><b>🔑 License function</b><div class="s">valida il codice · firma il token</div></div>
+        <div class="rail-lbl">contatto occasionale (attivazione + ricontrollo)</div>
         <div class="box store" style="min-width:auto"><span class="s">DB codici (KV / SQL)</span></div>
       </div>
       <div class="plat">
-        <div class="box and"><b>📦 CDN / Object storage</b><div class="s">manifest.json + file dei pacchi</div></div>
-        <div class="rail-lbl">solo on-demand</div>
+        <div class="box and"><b>🌐 Portali pubblici</b><div class="s">Esri · OSM · EMODnet · Copernicus/Sentinel · Overpass</div></div>
+        <div class="rail-lbl">download silente + calcolo SDB sul telefono</div>
       </div>
     </div>
-    <div class="note" style="margin-top:16px;text-align:center">Dati <b>live</b> quando online (<b>NON</b> il nostro server): Esri · OpenStreetMap · EMODnet · Copernicus/Sentinel · Overpass</div>
+    <div class="note" style="margin-top:16px;text-align:center"><b>Il nostro server NON serve né mappe né batimetria:</b> l'app li prende dai portali pubblici e calcola tutto sul dispositivo. Il backend valida solo il codice d'accesso; l'app si distribuisce dagli store.</div>
   </div>
 
-  <div class="note">🧰 <b>Stack consigliato (serverless, piano gratuito iniziale):</b> Cloudflare <b>Workers</b> + <b>R2</b> (o Supabase se preferisci SQL + admin pronto). Nessun server da mantenere, costi pay-as-you-go. Coerente con "nessun dato personale raccolto": si trasmettono solo un codice e un UUID casuale.</div>
+  <div class="note">🧰 <b>Stack consigliato (serverless, piano gratuito iniziale):</b> una piccola <b>License function</b> su Cloudflare Workers (o Supabase / Firebase) + un <b>DB codici</b> (KV/SQL). <b>Nessuno storage di mappe da gestire</b> — i dati arrivano dai portali. Costi minimi, niente server da mantenere. Si trasmettono solo un codice e un UUID casuale.</div>
 
   <!-- 4. APPROCCI -->
   <h2><span class="k">4</span> Approcci a confronto</h2>
