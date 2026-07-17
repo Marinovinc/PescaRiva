@@ -426,14 +426,16 @@ Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)
 - **App 3+ — Discipline in barca:** drifting, **traina d'altura**, e altre tecniche.
 - In prospettiva: una app per **disciplina/ambiente**, tutte con lo stesso stile e la stessa qualità.
 
-### 20.2 Brand e naming (proposta, da confermare)
+### 20.2 Brand e naming — DECISO: FishCast
 
-- **Brand ombrello (suite):** es. *"Pesca Suite"* / *"PescaApp"* / un marchio dedicato — **da decidere**.
-- **Nomi app (proposta):**
-  - Mare → **PescaRiva** (già esistente).
-  - Laghi/fiumi → **PescaLaghi** o **PescaAcqueDolci**.
-  - Barca → **PescaTraina** / **PescaAltura** (traina d'altura, drifting).
-- Icone e UI coerenti (stessa "famiglia" grafica), colore/tema per ambiente.
+- **Brand ombrello (suite): FishCast** (internazionale: "fishing" + "cast"). **Sostituisce** *PescaRiva*.
+- **Nomi app:**
+  - Mare / sotto costa → **FishCast** (o **FishCast Coast**) — questa app.
+  - Laghi/fiumi → **FishCast Lakes**.
+  - Barca (drifting, traina d'altura) → **FishCast Offshore**.
+- Icone e UI coerenti (famiglia FishCast), colore/tema per ambiente.
+- **Da verificare prima di depositare/pubblicare:** disponibilità **marchio**, **dominio** (fishcast.app / .com), **handle social**, **nome sugli store**.
+- **Rinomina tecnica** (repo, URL Pages, stringhe in-app, manifest, service worker, documenti): passo dedicato — cambia l'URL live in `marinovinc.github.io/FishCast`.
 
 ### 20.3 Riuso tecnico tra le app
 
