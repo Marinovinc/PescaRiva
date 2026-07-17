@@ -164,6 +164,8 @@ Punti chiave (favorevoli, perché l'app è privacy-friendly):
 - Contatti del titolare.
 - Da pubblicare a un URL stabile (es. pagina dedicata sul sito) e linkare in entrambi gli store.
 
+> **Stato: bozza PRONTA** → file `privacy.html` (in repo, pubblicabile a `https://marinovinc.github.io/PescaRiva/privacy.html`). Include: sintesi, dati solo-su-dispositivo, GPS locale, attivazione/licenza (codice + UUID casuale), servizi terze parti, cosa NON facciamo, permessi, minori, diritti GDPR, contatti, riepilogo in inglese. **Da completare** i campi tra `[…]`: titolare, indirizzo, email di contatto. La versione inglese completa seguirà con la localizzazione.
+
 ---
 
 ## 12. Piano di lavoro a fasi
