@@ -436,6 +436,7 @@ Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)
 - Icone e UI coerenti (famiglia FishCast), colore/tema per ambiente.
 - **Da verificare prima di depositare/pubblicare:** disponibilità **marchio**, **dominio** (fishcast.app / .com), **handle social**, **nome sugli store**.
 - **Rinomina tecnica** (repo, URL Pages, stringhe in-app, manifest, service worker, documenti): passo dedicato — cambia l'URL live in `marinovinc.github.io/FishCast`.
+- ✅ **PUBBLICATO (17/07/2026):** invece di rinominare il repo esistente, è stata pubblicata una **copia rebrandizzata** come nuovo repo **Marinovinc/FishCast** → **https://marinovinc.github.io/FishCast/** (m.html, access.html, ecc. live). *PescaRiva* resta come repo di sviluppo/progetto. Le due pubblicazioni coesistono.
 
 ### 20.3 Riuso tecnico tra le app
 
