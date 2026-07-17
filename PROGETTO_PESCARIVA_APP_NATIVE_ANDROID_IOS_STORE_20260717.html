@@ -254,13 +254,15 @@
 
   <!-- 3C. MONETIZZAZIONE -->
   <h2><span class="k" style="background:var(--warn);color:#04121e">€</span> Monetizzazione e prezzo</h2>
-  <p class="muted">Modello: <b>licenza stagionale 6 mesi</b>, fascia economica, incasso <b>ibrido</b>. L'app è <b>gratis da scaricare</b>; le funzioni si sbloccano con l'acquisto in-app <b>oppure</b> con un codice.</p>
+  <p class="muted">Modello: <b>abbonamento</b> con <b>offerta di lancio</b> (primi 6 mesi €3,99), poi <b>€1/mese</b> o <b>€10/anno</b>; alcune <b>funzioni premium</b> a pagamento nel tempo. Incasso <b>ibrido</b>. L'app è <b>gratis da scaricare</b>; si sblocca con l'acquisto in-app <b>oppure</b> con un codice.</p>
 
   <div class="showcase">
-    <div class="card hi" style="max-width:270px;text-align:center">
-      <div class="muted" style="font-size:13px">Licenza stagionale</div>
+    <div class="card hi" style="max-width:280px;text-align:center">
+      <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px">Offerta di lancio</div>
       <div class="kpi" style="font-size:40px;line-height:1.1">€3,99</div>
-      <div class="muted">6 mesi · tutte le funzioni</div>
+      <div class="muted">primi 6 mesi · funzioni base</div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
+      <div style="font-size:14px">poi <b>€1/mese</b> · oppure <b>€10/anno</b> <span class="muted">(invece di 12)</span></div>
       <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
       <div style="text-align:left;font-size:13px" class="muted">
         ✓ Profondità SDB + isobate<br>
@@ -268,7 +270,7 @@
         ✓ Prede · catture · uso offline<br>
         ✓ Aggiornamenti inclusi
       </div>
-      <div class="muted" style="font-size:12px;margin-top:12px">oppure <b>12 mesi €5,99</b> · prezzo tarabile dopo il lancio</div>
+      <div class="muted" style="font-size:12px;margin-top:12px">+ <b>funzioni premium</b> nel tempo (a pagamento)</div>
     </div>
     <ul class="callouts">
       <li>🛒 <b>Acquisto in-app (IAP):</b> per l'utente normale, con i pagamenti dello store → <b>conforme</b> Apple/Google.</li>
@@ -309,6 +311,32 @@
         <li>In più: <b>Apple Offer Codes</b> / <b>Google promo codes</b> per le promo</li>
       </ul>
     </div>
+  </div>
+
+  <!-- 3D. SUITE -->
+  <h2><span class="k" style="background:#7e42e0;color:#fff">▦</span> Una suite, non una sola app</h2>
+  <p class="muted">PescaRiva è la <b>prima</b> di una famiglia di app di pesca. Il <b>motore condiviso</b> (engine.js) e l'infrastruttura (Capacitor, license function, codici, account store) sono gli stessi → si riusa il grosso del lavoro.</p>
+  <div class="grid g3">
+    <div class="card hi"><h4>🌊 Mare / sotto costa</h4><p class="muted"><b>PescaRiva</b> (questa) — pesca da riva, batimetria del sottocosta.</p><span class="tag rec">in corso</span></div>
+    <div class="card"><h4>🏞️ Laghi e fiumi</h4><p class="muted">Acque interne — profili, spot, specie d'acqua dolce.</p></div>
+    <div class="card"><h4>⛵ Discipline in barca</h4><p class="muted">Drifting, <b>traina d'altura</b> e altre tecniche.</p></div>
+  </div>
+  <div class="note">🔁 <b>Riuso:</b> stesso motore + un unico account store + una sola license function/DB codici per tutta la suite. Ogni app aggiunge dati e funzioni del suo ambiente. In futuro: <b>bundle suite</b> e codici multi-app. <span class="muted">(Brand/nomi da confermare: es. PescaRiva · PescaLaghi · PescaTraina.)</span></div>
+
+  <!-- 3E. MARKETING -->
+  <h2><span class="k" style="background:#1877f2;color:#fff">f</span> Sito web + pagina Facebook</h2>
+  <div class="grid g2">
+    <div class="card"><h4>🌐 Sito / landing</h4><ul><li>Presenta suite e app, pulsanti verso gli store</li><li>Guida, privacy policy, FAQ, novità</li><li><b>Vendita diretta dei codici</b> (canale esterno)</li><li>Dominio proprio (es. pescariva.it) + SEO</li></ul></div>
+    <div class="card"><h4>📣 Pagina Facebook</h4><ul><li>Lanci, aggiornamenti, promo stagionali</li><li>Community (catture, spot, consigli) e assistenza</li><li>Collegamento sito ↔ Facebook ↔ store</li></ul></div>
+  </div>
+  <div class="warnbox">⚠️ La vendita dei codici vive <b>sul sito/Facebook</b>, <b>non</b> dentro l'app (regole store).</div>
+
+  <!-- 3F. MULTILINGUA -->
+  <h2><span class="k" style="background:var(--cy);color:#04121e">🌍</span> Multilingua (autoconfigurazione)</h2>
+  <p class="muted">Le app <b>rilevano la lingua del dispositivo</b> e si configurano da sole, con fallback (Inglese) e selettore manuale opzionale.</p>
+  <div class="grid g2">
+    <div class="card"><h4>Come funziona</h4><div class="pillrow"><span class="p">📱 Lingua del device → UI</span><span class="p">🔤 Dizionari JSON (it, en, …)</span><span class="p">🎣 Nomi specie tradotti</span></div><p class="muted">Lingue iniziali proposte: <b>IT, EN</b>, poi <b>DE, FR, ES</b> (da confermare).</p></div>
+    <div class="card"><h4>Da pianificare</h4><p class="muted">L'app oggi è tutta in italiano: la prima localizzazione richiede di <b>estrarre le stringhe</b> in un dizionario e tradurle — lavoro una tantum, poi riusato da tutta la suite. Anche le <b>schede store</b> vanno tradotte.</p></div>
   </div>
 
   <!-- 4. APPROCCI -->

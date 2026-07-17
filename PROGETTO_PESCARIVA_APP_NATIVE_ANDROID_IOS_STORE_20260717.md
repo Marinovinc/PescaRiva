@@ -343,11 +343,22 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
   - **Codici del nostro server** (validi 6 mesi) per **regali, promo, closed beta e vendita diretta** → fuori dagli store, **nessuna commissione**.
 - L'app è **gratuita da scaricare**; l'accesso alle funzioni si sblocca con l'acquisto **oppure** con un codice.
 
-### 19.2 Prezzo
+### 19.2 Prezzo (offerta di lancio + abbonamento + funzioni premium)
 
-- **6 mesi — €3,99** (prezzo di partenza consigliato, fascia economica).
-- *(Opzionale, come miglior valore)* **12 mesi — €5,99**.
-- Il prezzo è **tarabile** dopo un primo periodo (anche con A/B test o promo di lancio). Prezzi *psicologici* (x,99) e allineati alla stagione di pesca.
+**Offerta di lancio (introduttiva)**
+- **Primi 6 mesi a €3,99**, poi il servizio prosegue alla tariffa di abbonamento scelta. Sugli store si realizza come **offerta introduttiva** sull'abbonamento auto-rinnovabile.
+
+**Abbonamento a regime (auto-rinnovabile), due durate**
+- **Mensile — €1,00/mese**
+- **Annuale — €10,00/anno** (invece di €12 → ~2 mesi gratis, incentivo all'annuale)
+
+**Funzioni premium (crescono nel tempo)**
+- L'abbonamento base sblocca l'app. **Alcune funzioni** (attuali o nuove) possono essere **premium**, a pagamento aggiuntivo: modello a **livelli** (Base / Premium) oppure **add-on** à la carte.
+- Politica di prodotto: **le nuove funzioni si aggiungono a pagamento**, così il valore percepito (e il ricavo) cresce nel tempo senza svendere l'esistente.
+
+**Note**
+- Prezzi *psicologici*, tarabili dopo il lancio (promo stagionali).
+- I **codici** del nostro server (§18.2) possono concedere accesso **Base** o **Premium**, per regali/promo/beta/vendita diretta.
 
 ### 19.3 Come si incassa (ibrido) — dettaglio
 
@@ -379,8 +390,9 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)**.
 - Netto ex-IVA ≈ €3,27; **proventi ≈ €2,78** per vendita IAP (con 30% sarebbero ≈ €2,29).
 - Vendita **diretta** con Stripe: ≈ €3,99 − commissioni (~1,5% + €0,25) − IVA da versare ≈ **€2,9–3,0** netti, ma con gestione fiscale a tuo carico.
-- **Break-even costo Apple** (99 $/anno ≈ €90): servono ~**33-36 vendite/anno** via IAP con SBP. Google è una tantum (25 $), già coperto.
-- Conclusione: bastano poche decine di vendite l'anno per coprire i costi; il resto è margine.
+- **Break-even costo Apple** (99 $/anno ≈ €90): servono ~**33-36 attivazioni** (prezzo lancio) via IAP con SBP. Google è una tantum (25 $), già coperto.
+- **A regime (dopo i 6 mesi intro):** €10/anno → netto ≈ **€6,9** con SBP; €1/mese → ≈ **€0,70 netti/mese** ricorrenti. L'**abbonamento ricorrente** rende il modello sostenibile e crescente nel tempo; il prezzo di lancio €3,99 è soprattutto **acquisizione clienti**.
+- Conclusione: bastano poche decine di attivazioni per coprire i costi; l'abbonamento e le funzioni premium fanno il margine.
 
 ### 19.7 Checklist monetizzazione
 
@@ -395,7 +407,89 @@ Ipotesi: prezzo **€3,99** IVA inclusa (IT 22%), **Small Business Program (15%)
 
 ---
 
-## 20. Riferimenti
+## 20. Suite di app (brand ed espansione)
+
+> Questa app è la **prima di una suite** di app per la pesca. Vantaggio enorme: il **motore condiviso** (`engine.js`) e l'infrastruttura (Capacitor, license function, sistema codici, account store) sono **gli stessi** per tutte → si riusa il grosso del lavoro.
+
+### 20.1 Visione
+
+- **App 1 (questa) — Mare / sotto costa:** PescaRiva (pesca da riva, batimetria del sottocosta).
+- **App 2 — Acque interne:** laghi e fiumi.
+- **App 3+ — Discipline in barca:** drifting, **traina d'altura**, e altre tecniche.
+- In prospettiva: una app per **disciplina/ambiente**, tutte con lo stesso stile e la stessa qualità.
+
+### 20.2 Brand e naming (proposta, da confermare)
+
+- **Brand ombrello (suite):** es. *"Pesca Suite"* / *"PescaApp"* / un marchio dedicato — **da decidere**.
+- **Nomi app (proposta):**
+  - Mare → **PescaRiva** (già esistente).
+  - Laghi/fiumi → **PescaLaghi** o **PescaAcqueDolci**.
+  - Barca → **PescaTraina** / **PescaAltura** (traina d'altura, drifting).
+- Icone e UI coerenti (stessa "famiglia" grafica), colore/tema per ambiente.
+
+### 20.3 Riuso tecnico tra le app
+
+- **Motore comune** `engine.js` (mappa, GPS, righello, catture, offline, licenza) → libreria condivisa.
+- Ogni app aggiunge i **dati e le funzioni specifiche** dell'ambiente (es. batimetria mare vs profili di lago/fiume; specie e tecniche diverse).
+- **Un unico account** sviluppatore Google/Apple per tutta la suite; **una sola** license function/DB codici (multi-app).
+
+### 20.4 Monetizzazione della suite
+
+- Ogni app ha il suo abbonamento (§19).
+- In futuro: **bundle suite** (accesso a più app a prezzo scontato) e/o **codici multi-app**.
+- Le **funzioni premium** possono essere trasversali (es. sync catture tra le app della suite).
+
+---
+
+## 21. Marketing (sito web + pagina Facebook)
+
+### 21.1 Sito web / landing
+
+- **Scopo:** presentare la suite e le singole app, con pulsanti verso **Google Play** e **App Store**, la **guida**, la **privacy policy** e la **vendita diretta dei codici** (canale esterno, non pubblicizzato in-app).
+- **Contenuti:** cosa fa l'app, screenshot/video, funzioni, prezzi, FAQ, blog/novità.
+- **Hosting:** una pagina dedicata (es. su GitHub Pages come il resto, o un **dominio** proprio tipo `pescariva.it` / un dominio della suite). SEO su parole chiave (pesca, surfcasting, batimetria, spinning, mare, laghi, traina…).
+- **Coerenza store:** la vendita dei codici vive **qui** (sito/FB), **non** dentro l'app.
+
+### 21.2 Pagina Facebook
+
+- **Pagina brand** della suite per: annunci di lancio, aggiornamenti, promo stagionali, community (catture, spot, consigli), assistenza informale.
+- Collegamento reciproco sito ↔ Facebook ↔ schede store.
+- Possibile gruppo/community per fidelizzare i pescatori e raccogliere feedback per nuove funzioni.
+
+### 21.3 Materiali comuni
+
+- Kit grafico coerente per tutte le app (logo suite + logo per app), template screenshot store, brevi **video demo**.
+
+---
+
+## 22. Multilingua (autoconfigurazione della lingua)
+
+> Requisito: le app devono **auto-configurarsi** in base alla lingua del dispositivo.
+
+### 22.1 Come funziona
+
+- All'avvio l'app **rileva la lingua del dispositivo** e imposta l'interfaccia di conseguenza, con **fallback** (es. Inglese) se la lingua non è disponibile.
+- **Selettore manuale** opzionale (per chi vuole forzare una lingua).
+
+### 22.2 Struttura tecnica (i18n)
+
+- Estrarre le stringhe dell'interfaccia (oggi **hardcoded in italiano** in `engine.js`/`m.html`) in **dizionari** per lingua (file JSON: `it`, `en`, …) e usare una funzione `t('chiave')`.
+- **Lingue iniziali proposte (da confermare):** **IT** + **EN** (base), poi **DE**, **FR**, **ES** (Mediterraneo + turismo). Ampliabili.
+- **Dati localizzati specifici della pesca:** i **nomi delle specie** e delle tecniche/esche cambiano per lingua/paese → vanno tradotti nei dizionari (importante per un'app di pesca).
+- **Numeri/unità:** metri sempre, ma formattazione locale (virgola/punto) coerente con la lingua.
+
+### 22.3 Store e marketing multilingua
+
+- **Schede store** (titolo, descrizione, screenshot) tradotte nelle lingue supportate.
+- Sito web e materiali marketing almeno in **IT/EN**.
+
+### 22.4 Lavoro da pianificare
+
+- L'app attuale è **tutta in italiano**: la prima localizzazione richiede di **estrarre le stringhe** in un dizionario e tradurle. È un lavoro reale ma una tantum, poi riusato da tutta la suite.
+
+---
+
+## 23. Riferimenti
 
 - Repo e sito: `github.com/Marinovinc/PescaRiva` — `https://marinovinc.github.io/PescaRiva/`
 - Capacitor (guscio nativo cross-platform), PWABuilder (packaging PWA→store), Bubblewrap/TWA (Android).
