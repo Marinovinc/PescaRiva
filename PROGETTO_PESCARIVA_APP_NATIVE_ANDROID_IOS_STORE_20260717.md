@@ -235,7 +235,113 @@ Ogni fase avrà una **checklist di verifica** e un test su dispositivo reale pri
 
 ---
 
-## 18. Riferimenti
+## 18. Architettura server-less: accesso a codice + pacchi offline
+
+> Requisito: **l'app deve funzionare senza un server di supporto**. Un server (minimo, serverless) serve **solo** per due cose: **(A) validare il codice di accesso** e **(B) distribuire i pacchi mappe/dati offline**. Tutto il resto gira sul dispositivo.
+
+### 18.1 Principio: offline-first, server-opzionale
+
+- **Il motore dell'app (`engine.js`) e i dati dell'utente restano sul dispositivo.** Catture, spot, calibrazioni, zone porto: solo in locale.
+- **I dati "live" (mappe, batimetria, porti) NON passano dal nostro server:** l'app li prende — quando online — direttamente dai servizi pubblici di terze parti (Esri, OpenStreetMap, EMODnet, Copernicus/Sentinel via AWS, Overpass). Quindi l'app **non dipende** da un nostro backend per le funzioni.
+- **Il nostro server NON è mai nel percorso d'uso delle funzioni.** Viene contattato solo: all'**attivazione** (e a un ricontrollo periodico) e quando l'utente **scarica un pacco** offline.
+- Conseguenza: se il nostro server è irraggiungibile, l'app **continua a funzionare** (entro il periodo di grazia della licenza e con i pacchi già scaricati).
+
+### 18.2 Ruolo A — Controllo accesso con codice di attivazione
+
+**Flusso utente**
+1. L'utente installa l'app dagli store.
+2. Al primo avvio compare una schermata che chiede il **codice di attivazione**.
+3. L'app invia al server `{ codice, deviceId }` (deviceId = UUID casuale generato dall'app, **non** un identificativo hardware).
+4. Il server valida il codice e restituisce un **token di licenza firmato** (con scadenza, es. 30-90 giorni, legato al deviceId).
+5. L'app salva il token in **storage sicuro** e lo **verifica in locale** (firma) ad ogni avvio → funziona **offline**.
+6. Prima della scadenza (o ogni N giorni) l'app **rinnova** il token in background; se offline, un **periodo di grazia** la tiene attiva; solo dopo grazia+scadenza richiede di riconnettersi.
+
+**Perché è sicuro e offline**
+- Il token è firmato con la **chiave privata** del server (crittografia asimmetrica, es. Ed25519/RS256). L'app contiene **solo la chiave pubblica**: può **verificare** il token senza rete e **non può falsificarlo**.
+- Il token è **legato al deviceId** (limita la condivisione); un codice può consentire *N* dispositivi.
+- Solo **HTTPS**; endpoint con **rate-limit**; codici **hashed** a riposo; nessuna password, nessun dato personale.
+- Il deviceId è un **UUID casuale** salvato in Keychain/Keystore: rispetta le regole degli store (iOS vieta certi identificativi hardware) e la linea "nessun dato raccolto".
+
+**Modello dati (tabella codici)**
+- `code_hash`, `piano/plan`, `max_attivazioni`, `attivazioni[] (deviceId, data)`, `scadenza`, `revocato`.
+
+**Amministrazione**
+- Un modo semplice per **generare** e **revocare** codici: uno script CLI o una mini-pagina admin protetta. I codici possono avere scadenza e numero massimo di attivazioni.
+
+### 18.3 Ruolo B — Pacchi mappe/dati offline per regione
+
+**Cos'è un pacco**
+- Un archivio statico che contiene, per un tratto di costa: **tessere mappa** pre-scaricate (range di zoom), la **batimetria SDB pre-elaborata** (raster già calcolato, così il telefono non ricalcola nulla), i **poligoni dei porti** e l'elenco **località** della zona.
+- Esempio: *"Pacco Lazio sud (Sabaudia-Circeo)"*.
+
+**Distribuzione (server-less davvero)**
+- I pacchi sono **file statici** su object storage / CDN (es. Cloudflare R2, S3, Backblaze B2, o GitHub Releases): **nessun calcolo lato server**, solo file.
+- Un **manifest** pubblico (`packs.json`) elenca i pacchi disponibili con: `id`, `nome`, `bbox`, `versione`, `dimensione`, `url`, `checksum`.
+
+**Flusso sul dispositivo**
+1. Schermata "Scarica pacchi offline" → elenco regioni (dal manifest).
+2. L'utente scarica un pacco → l'app **verifica il checksum** → lo **scompatta** nel filesystem dell'app (plugin Capacitor Filesystem / Cache Storage).
+3. Offline, l'app legge tessere e SDB **dal pacco locale** (sorgente tile locale + griglia SDB locale), con fallback ai servizi live quando c'è rete.
+
+**Aggancio ai due ruoli (accesso ↔ download)**
+- Il **download dei pacchi è riservato agli utenti attivati**: la *license function* rilascia un **URL firmato a scadenza breve** per scaricare il file dal CDN. Così i due ruoli del server sono collegati e il pacco non è scaricabile senza licenza valida.
+
+**Pipeline di pre-elaborazione (sul tuo PC, non a runtime)**
+- Uno **script di build** che, dato un `bbox`: scarica le scene Sentinel-2, calcola il **raster SDB** (riusando la logica Stumpf già presente in `engine.js`), pre-renderizza le tessere, interroga Overpass per i porti, e produce il **pacco** + aggiorna il `manifest`. È qui che la batimetria diventa "pre-elaborata": calcolata **una volta**, spedita come file.
+
+**Versioning**
+- Ogni pacco ha una **versione**; l'app confronta col manifest e propone l'**aggiornamento** quando il pacco cambia.
+
+### 18.4 Stack consigliato e costi
+
+- **License function:** una funzione serverless (es. **Cloudflare Workers**, oppure Supabase Edge Function / Firebase Functions / piccola Lambda). Database codici su **KV/D1** (Cloudflare) o Postgres (Supabase).
+- **Storage pacchi:** object storage/CDN (**Cloudflare R2**, S3, B2, o GitHub Releases per iniziare).
+- **Costi:** i **piani gratuiti** coprono la fase iniziale; crescita **pay-as-you-go**; **nessun server da mantenere** (serverless). Consigliato per minimalismo: **Cloudflare Workers + R2** (o Supabase se preferisci SQL + pannello admin pronto).
+
+### 18.5 Impatti su privacy e store
+
+- Coerente con "**nessun dato personale raccolto**": si trasmettono solo un **codice** e un **UUID casuale**; niente password, niente PII.
+- Da citare nella **privacy policy**: uso del deviceId casuale per la licenza e download dei pacchi.
+- Nessun impatto negativo sulle **privacy label**: resta "Data Not Collected" (o al più "Identificatori" non collegati all'utente, da valutare).
+
+### 18.6 Schema
+
+```
+                DISPOSITIVO (offline-first)
+   ┌───────────────────────────────────────────┐
+   │  App + engine.js                           │
+   │  token licenza (verificato IN LOCALE)      │
+   │  pacchi offline (Filesystem)               │
+   │  dati utente: catture/spot (solo locale)   │
+   └───────┬───────────────────────┬────────────┘
+           │ occasionale           │ on-demand
+           ▼                       ▼
+   [ License Function ]      [ CDN / Object storage ]
+    valida codice             manifest.json + pacchi
+    firma token               (URL firmati per il download)
+    rilascia URL firmati
+           │
+           ▼
+    [ DB codici (KV/SQL) ]
+
+   Dati LIVE quando online (NON nostro server):
+   Esri · OSM · EMODnet · Copernicus/Sentinel · Overpass
+```
+
+### 18.7 Checklist di realizzazione
+
+- [ ] Definire formato **token** (JWT firmato Ed25519/RS256) e scadenza + periodo di grazia.
+- [ ] Generare coppia di chiavi; **chiave pubblica** dentro l'app, **privata** solo sul server.
+- [ ] Implementare la **license function** (valida codice, firma token, rilascia URL firmati).
+- [ ] Predisporre **DB codici** + strumento genera/revoca.
+- [ ] Schermata **attivazione** nell'app + storage sicuro del token + verifica locale + ricontrollo/grazia.
+- [ ] Definire il **formato pacco** e scrivere la **pipeline di pre-elaborazione** (SDB + tessere + porti).
+- [ ] Pubblicare **manifest** + pacchi su CDN; schermata **download/gestione pacchi** nell'app (checksum, unpack, uso offline, aggiornamenti).
+- [ ] Aggiornare **privacy policy** (deviceId, download pacchi).
+
+---
+
+## 19. Riferimenti
 
 - Repo e sito: `github.com/Marinovinc/PescaRiva` — `https://marinovinc.github.io/PescaRiva/`
 - Capacitor (guscio nativo cross-platform), PWABuilder (packaging PWA→store), Bubblewrap/TWA (Android).
